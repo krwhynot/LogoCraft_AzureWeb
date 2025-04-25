@@ -174,7 +174,7 @@ function App() {
   };
 
   return (
-    <Container fluid className="app-container">
+    <Container fluid className="app-container centered-container">
       <div className="logo-header">
         <h1 className="app-title">LogoCraft Web</h1>
         <p className="text-center text-muted">Convert your logos to multiple formats with just a few clicks</p>
@@ -195,31 +195,32 @@ function App() {
         </Alert>
       )}
       
+      {/* New Horizontal Layout */}
       <Row className="content-wrapper gx-4">
-        {/* Control Column - Left side */}
-        <Col lg={4} md={5} className="control-column">
-          <Row>
-            <Col md={12} lg={12}>
-              <div className={`panel ${activeStep !== 1 ? 'panel-inactive' : ''}`}>
-                <div className="panel-header">
-                  <h3 className="panel-title">
-                    <Badge bg="primary" className="step-badge">1</Badge> Image Upload
-                  </h3>
-                </div>
-                <div className="panel-body">
-                  <ImagePreview 
-                    preview={preview} 
-                    onFileSelect={handleFileSelect}
-                    onRemoveImage={handleRemoveImage}
-                    imageSize={imageSize}
-                    fileName={currentFile?.name}
-                  />
-                </div>
-              </div>
-            </Col>
-            
-            <Col md={6} lg={12}>
-              <div className={`panel ${activeStep !== 2 ? 'panel-inactive' : ''}`}>
+        {/* Top Row: Upload and Options */}
+        <Col lg={4} md={6} className="upload-column mb-3">
+          <div className={`panel h-100 ${activeStep !== 1 ? 'panel-inactive' : ''}`}>
+            <div className="panel-header">
+              <h3 className="panel-title">
+                <Badge bg="primary" className="step-badge">1</Badge> Image Upload
+              </h3>
+            </div>
+            <div className="panel-body d-flex flex-column">
+              <ImagePreview 
+                preview={preview} 
+                onFileSelect={handleFileSelect}
+                onRemoveImage={handleRemoveImage}
+                imageSize={imageSize}
+                fileName={currentFile?.name}
+              />
+            </div>
+          </div>
+        </Col>
+        
+        <Col lg={8} md={6} className="options-column mb-3">
+          <Row className="h-100">
+            <Col md={6} className="mb-3 mb-md-0">
+              <div className={`panel h-100 ${activeStep !== 2 ? 'panel-inactive' : ''}`}>
                 <div className="panel-header">
                   <h3 className="panel-title">
                     <Badge bg="primary" className="step-badge">2</Badge> Export Options
@@ -234,9 +235,8 @@ function App() {
                 </div>
               </div>
             </Col>
-            
-            <Col md={6} lg={12}>
-              <div className={`panel ${activeStep !== 2 ? 'panel-inactive' : ''}`}>
+            <Col md={6}>
+              <div className={`panel h-100 ${activeStep !== 2 ? 'panel-inactive' : ''}`}>
                 <div className="panel-header">
                   <h3 className="panel-title">Processing</h3>
                 </div>
@@ -251,21 +251,12 @@ function App() {
                   />
                 </div>
               </div>
-              
-              <div className="panel d-none d-md-block">
-                <div className="panel-header">
-                  <h3 className="panel-title">Supported Formats</h3>
-                </div>
-                <div className="panel-body">
-                  <FormatInfo />
-                </div>
-              </div>
             </Col>
           </Row>
         </Col>
         
-        {/* Preview/Results Column - Right side */}
-        <Col lg={8} md={7} className="preview-column">
+        {/* Bottom Row: Preview and Format Info */}
+        <Col lg={9} md={8} className="preview-column mb-3">
           <MainPreview 
             preview={preview}
             processedImages={processedImages}
@@ -276,34 +267,47 @@ function App() {
             activeStep={activeStep}
           />
         </Col>
+        
+        <Col lg={3} md={4} className="info-column mb-3">
+          <div className="panel h-100 d-none d-md-block">
+            <div className="panel-header">
+              <h3 className="panel-title">Supported Formats</h3>
+            </div>
+            <div className="panel-body">
+              <FormatInfo />
+            </div>
+          </div>
+        </Col>
       </Row>
       
       <StatusBar message={statusMessage} />
       
       {(currentFile || processedImages.length > 0) && (
         <div className="sticky-footer">
-          <Button 
-            variant="outline-secondary"
-            onClick={handleReset}
-          >
-            Start Over
-          </Button>
-          
-          {processedImages.length > 0 && (
-            <div>
-              <span className="text-muted me-2">
-                {processedImages.length} formats processed
-              </span>
-              <Button 
-                variant="success"
-                onClick={() => {
-                  alert("In production, this would download all processed images as a zip file.");
-                }}
-              >
-                Download All
-              </Button>
-            </div>
-          )}
+          <div>
+            <Button 
+              variant="outline-secondary"
+              onClick={handleReset}
+            >
+              Start Over
+            </Button>
+            
+            {processedImages.length > 0 && (
+              <div>
+                <span className="text-muted me-2">
+                  {processedImages.length} formats processed
+                </span>
+                <Button 
+                  variant="success"
+                  onClick={() => {
+                    alert("In production, this would download all processed images as a zip file.");
+                  }}
+                >
+                  Download All
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </Container>

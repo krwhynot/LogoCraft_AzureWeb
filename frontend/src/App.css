@@ -18,19 +18,45 @@
   --step-completed: var(--success-color);
 }
 
+html {
+  background-color: #e9ecef; /* Slightly darker background for contrast */
+}
+
 body {
   background-color: var(--light-bg);
   color: var(--text-color);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  justify-content: center; /* Center content horizontally */
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  width: 100%;
 }
 
 .app-container {
   padding: 0;
-  max-width: 1600px; /* Increased max-width */
+  width: 100%; /* Use full width */
   margin: 0 auto;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+.centered-container {
+  max-width: 1400px; /* Slightly reduced max-width */
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 40px; /* Add padding on the left */
+  padding-right: 40px; /* Add padding on the right */
+  width: 100%; /* Ensure it takes full width */
+}
+
+/* Ensure the root element takes full width */
+#root {
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 .logo-header {
@@ -51,9 +77,9 @@ body {
 
 .content-wrapper {
   flex: 1;
-  margin: 0 15px 70px;
-  max-height: 80vh; /* Limit the height to avoid excessive scrolling */
-  overflow-y: auto;
+  margin: 0 0 70px; /* Remove left/right margin since we have padding on the container */
+  max-height: none; /* Remove height limitation to allow horizontal layout */
+  overflow-y: visible;
 }
 
 /* Panel styling */
@@ -62,9 +88,12 @@ body {
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   padding: 0;
-  margin-bottom: 15px; /* Reduced margin */
+  margin-bottom: 0; /* Remove bottom margin as we're using Bootstrap's spacing utilities */
   transition: all 0.3s ease;
   overflow: hidden;
+  height: 100%; /* Make panels fill their container height */
+  display: flex;
+  flex-direction: column;
 }
 
 .panel:hover {
@@ -83,6 +112,8 @@ body {
 
 .panel-body {
   padding: 15px; /* Reduced padding */
+  flex: 1; /* Allow panel body to expand */
+  overflow-y: auto; /* Add scrolling for content that might overflow */
 }
 
 .panel-active {
@@ -109,16 +140,24 @@ body {
   font-size: 14px;
 }
 
-/* Control column */
-.control-column {
-  padding-right: 10px;
+/* Column styling for new layout */
+.upload-column, .options-column, .preview-column, .info-column {
+  padding: 0 10px;
 }
 
 /* Preview column */
 .preview-column {
-  padding-left: 10px;
   display: flex;
   flex-direction: column;
+}
+
+/* Options column with nested row */
+.options-column .row {
+  margin: 0 -5px;
+}
+
+.options-column .col-md-6 {
+  padding: 0 5px;
 }
 
 /* Steps indicator */
@@ -196,7 +235,7 @@ body {
   background-color: var(--panel-bg);
   border: 2px dashed var(--border-color);
   border-radius: 8px;
-  height: 180px; /* Reduced height */
+  height: 160px; /* Further reduced height for horizontal layout */
   position: relative;
   overflow: hidden;
   transition: all 0.3s ease;
@@ -260,7 +299,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 450px; /* Reduced minimum height */
+  min-height: 400px; /* Further reduced minimum height for horizontal layout */
 }
 
 .preview-body {
@@ -271,8 +310,8 @@ body {
   background-color: var(--light-bg);
   border-radius: 4px;
   padding: 20px;
-  min-height: 350px; /* Reduced minimum height */
-  max-height: 60vh; /* Limit maximum height */
+  min-height: 300px; /* Further reduced minimum height */
+  max-height: 50vh; /* Reduced maximum height */
   overflow: auto;
 }
 
@@ -451,12 +490,25 @@ body {
   left: 0;
   right: 0;
   background: var(--panel-bg);
-  padding: 15px 20px;
+  padding: 15px 0;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.sticky-footer > div {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 40px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  z-index: 1000;
+  width: 100%;
+}
+
+.sticky-footer > div > div {
+  display: flex;
+  align-items: center;
+  gap: 15px;
 }
 
 /* Progress bar */
@@ -513,35 +565,21 @@ body {
   100% { transform: rotate(360deg); }
 }
 
-/* Layout classes for horizontal arrangement */
-.layout-horizontal .row {
-  flex-direction: row;
-}
-
 /* Responsive styles */
 @media (min-width: 992px) {
-  .layout-horizontal .row {
-    flex-direction: row;
+  .preview-body {
+    max-height: 50vh;
   }
   
-  .preview-body {
-    max-height: 70vh;
+  /* Ensure equal heights in the options row */
+  .options-column .row {
+    height: 100%;
   }
 }
 
 @media (max-width: 991px) {
   .content-wrapper {
     margin-bottom: 90px;
-  }
-  
-  .control-column .row {
-    margin-right: -5px;
-    margin-left: -5px;
-  }
-  
-  .control-column .col-md-6 {
-    padding-right: 5px;
-    padding-left: 5px;
   }
   
   .steps-container {
@@ -554,12 +592,32 @@ body {
   .step-item {
     min-width: 150px;
   }
+  
+  /* Stack panels vertically on medium screens */
+  .options-column .row {
+    flex-direction: column;
+  }
+  
+  .options-column .col-md-6 {
+    margin-bottom: 15px;
+  }
+  
+  .options-column .col-md-6:last-child {
+    margin-bottom: 0;
+  }
 }
 
 @media (max-width: 767px) {
-  .control-column,
-  .preview-column {
+  .upload-column,
+  .options-column,
+  .preview-column,
+  .info-column {
     padding: 0;
+  }
+  
+  /* Return to vertical layout on mobile */
+  .content-wrapper > .row {
+    flex-direction: column;
   }
   
   .sticky-footer {
@@ -575,6 +633,12 @@ body {
   
   .status-bar {
     text-align: center;
+  }
+  
+  /* Show format info on mobile */
+  .info-column .panel {
+    display: block !important;
+    margin-bottom: 15px;
   }
 }
 
