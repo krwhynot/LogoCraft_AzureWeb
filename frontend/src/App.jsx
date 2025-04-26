@@ -27,7 +27,50 @@ function App() {
     'Smalllogo.png': true,
     'KDlogo.png': true,
     'RPTlogo.bmp': true,
-    'PRINTLOGO.bmp': true
+    'PRINTLOGO.bmp': true,
+     
+    // Online Images - Feature Graphic
+    'Feature Graphic.png': true,
+    
+    // Online Images - Push
+    'hpns.png': true,
+    
+    // Online Images - Logo
+    'loginLogo.png': true,
+    'logo.png': true,
+    'logo@2x.png': true,
+    'logo@3x.png': true,
+    
+    // Online Images - Appicon
+    'appicon-60.png': true,
+    'appicon-60@2x.png': true,
+    'appicon-60@3x.png': true,
+    'appicon.png': true,
+    'appicon-512.png': true,
+    'appicon@2x.png': true,
+    'default_app_logo.png': true,
+    'DefaultIcon.png': true,
+    
+    // Online Images - Default Large
+    'default-large.png': true,
+    'Default-568h@2x.png': true,
+    'Default-677h@2x.png': true,
+    'Default-736h@3x.png': true,
+    
+    // Online Images - Default XL
+    'Default-Portrait-1792h@2x.png': true,
+    'Default-Portrait-2436h@3x.png': true,
+    'Default-Portrait-2688h@3x.png': true,
+    
+    // Online Images - Default
+    'Default.png': true,
+    'Default@2x.png': true,
+    
+    // Online Images - Miscellaneous
+    'CarryoutBtn.png': true,
+    'DeliveryBtn.png': true,
+    'FutureBtn.png': true,
+    'NowBtn.png': true
   });
   const [outputDir, setOutputDir] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -149,6 +192,49 @@ function App() {
       case 'KDlogo.png': return { width: 140, height: 112 };
       case 'RPTlogo.bmp': return { width: 155, height: 110 };
       case 'PRINTLOGO.bmp': return { width: 600, height: 256 };
+
+          // Online Images - Feature Graphic
+      case 'Feature Graphic.png': return { width: 1024, height: 500 };
+      
+      // Online Images - Push
+      case 'hpns.png': return { width: 96, height: 96 };
+      
+      // Online Images - Logo
+      case 'loginLogo.png': return { width: 600, height: 600 };
+      case 'logo.png': return { width: 300, height: 300 };
+      case 'logo@2x.png': return { width: 300, height: 300 };
+      case 'logo@3x.png': return { width: 300, height: 300 };
+      
+      // Online Images - Appicon
+      case 'appicon-60.png': return { width: 60, height: 60 };
+      case 'appicon-60@2x.png': return { width: 120, height: 120 };
+      case 'appicon-60@3x.png': return { width: 180, height: 180 };
+      case 'appicon.png': return { width: 57, height: 57 };
+      case 'appicon-512.png': return { width: 512, height: 512 };
+      case 'appicon@2x.png': return { width: 114, height: 114 };
+      case 'default_app_logo.png': return { width: 512, height: 512 };
+      case 'DefaultIcon.png': return { width: 1024, height: 1024 };
+      
+      // Online Images - Default Large
+      case 'default-large.png': return { width: 640, height: 1136 };
+      case 'Default-568h@2x.png': return { width: 640, height: 1136 };
+      case 'Default-677h@2x.png': return { width: 750, height: 1334 };
+      case 'Default-736h@3x.png': return { width: 1242, height: 2208 };
+      
+      // Online Images - Default XL
+      case 'Default-Portrait-1792h@2x.png': return { width: 828, height: 1792 };
+      case 'Default-Portrait-2436h@3x.png': return { width: 1125, height: 2436 };
+      case 'Default-Portrait-2688h@3x.png': return { width: 1242, height: 2688 };
+      
+      // Online Images - Default
+      case 'Default.png': return { width: 640, height: 980 };
+      case 'Default@2x.png': return { width: 1242, height: 1902 };
+      
+      // Online Images - Miscellaneous
+      case 'CarryoutBtn.png': return { width: 300, height: 300 };
+      case 'DeliveryBtn.png': return { width: 300, height: 300 };
+      case 'FutureBtn.png': return { width: 300, height: 300 };
+      case 'NowBtn.png': return { width: 300, height: 300 };
       default: return { width: 300, height: 300 };
     }
   };
@@ -163,7 +249,50 @@ function App() {
       'Smalllogo.png': true,
       'KDlogo.png': true,
       'RPTlogo.bmp': true,
-      'PRINTLOGO.bmp': true
+      'PRINTLOGO.bmp': true,
+
+      // Online Images - Feature Graphic
+      'Feature Graphic.png': true,
+      
+      // Online Images - Push
+      'hpns.png': true,
+      
+      // Online Images - Logo
+      'loginLogo.png': true,
+      'logo.png': true,
+      'logo@2x.png': true,
+      'logo@3x.png': true,
+      
+      // Online Images - Appicon
+      'appicon-60.png': true,
+      'appicon-60@2x.png': true,
+      'appicon-60@3x.png': true,
+      'appicon.png': true,
+      'appicon-512.png': true,
+      'appicon@2x.png': true,
+      'default_app_logo.png': true,
+      'DefaultIcon.png': true,
+      
+      // Online Images - Default Large
+      'default.png': true,
+      'Default-568h@2x.png': true,
+      'Default-677h@2x.png': true,
+      'Default-736h@3x.png': true,
+      
+      // Online Images - Default XL
+      'Default-Portrait-1792h@2x.png': true,
+      'Default-Portrait-2436h@3x.png': true,
+      'Default-Portrait-2688h@3x.png': true,
+      
+      // Online Images - Default
+      'Default.png': true,
+      'Default@2x.png': true,
+      
+      // Online Images - Miscellaneous
+      'CarryoutBtn.png': true,
+      'DeliveryBtn.png': true,
+      'FutureBtn.png': true,
+      'NowBtn.png': true  
     });
     setOutputDir('');
     setProcessedImages([]);

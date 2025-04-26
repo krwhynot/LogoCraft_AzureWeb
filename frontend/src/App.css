@@ -436,11 +436,10 @@ body {
   color: white;
 }
 
+
 .format-checkbox {
-  margin: 8px 0; /* Reduced margin */
-  transition: all 0.2s ease;
-  padding: 5px 8px; /* Reduced padding */
-  border-radius: 4px;
+  margin: 4px 0;
+  font-size: 0.9rem;
 }
 
 .format-checkbox:hover {
@@ -448,17 +447,52 @@ body {
 }
 
 .format-group {
-  margin-bottom: 15px; /* Reduced margin */
+  margin-bottom: 15px; 
+}
+
+.format-category-heading {
+  font-weight: 600;
+  color: var(--text-color);
+  font-size: 14px;
+  margin: 12px 0 5px 0;
+  padding-bottom: 3px;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.format-category-heading:first-of-type {
+  margin-top: 0;
+}
+
+.format-group-card {
+  border: 1px solid var(--border-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  margin-bottom: 15px;
+}
+
+.format-group-card:hover {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.format-group-header {
+  background-color: var(--light-bg);
+  border-bottom: 1px solid var(--border-color);
+  padding: 10px 15px;
+}
+
+.format-group-body {
+  padding: 10px 15px;
+
 }
 
 .format-group-title {
   font-weight: 600;
-  margin-bottom: 8px; /* Reduced margin */
-  color: var(--text-color);
+  color: var(--primary-color);
   font-size: 16px;
-  padding-bottom: 5px; /* Reduced padding */
-  border-bottom: 1px solid var(--border-color);
+  margin: 0;
 }
+
+
 
 .tooltip-icon {
   margin-left: 5px;
