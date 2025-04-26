@@ -454,13 +454,31 @@ body {
   font-weight: 600;
   color: var(--text-color);
   font-size: 14px;
-  margin: 12px 0 5px 0;
+  margin: 0;
   padding-bottom: 3px;
-  border-bottom: 1px dashed var(--border-color);
 }
 
-.format-category-heading:first-of-type {
-  margin-top: 0;
+.format-category {
+  border-bottom: 1px dashed var(--border-color);
+  margin-bottom: 8px;
+}
+
+.format-category:last-child {
+  border-bottom: none;
+}
+
+.format-category-toggle {
+  padding: 5px 0 !important;
+  color: var(--text-color) !important;
+  text-decoration: none !important;
+}
+
+.format-category-toggle:hover {
+  background-color: var(--light-bg);
+}
+
+.format-category-toggle:focus {
+  box-shadow: none !important;
 }
 
 .format-group-card {

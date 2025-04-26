@@ -1,9 +1,20 @@
 // frontend/src/components/OutputOptions.jsx
-import React from 'react';
-import { Form, OverlayTrigger, Tooltip, Button, Card } from 'react-bootstrap';
-import { InfoCircle, CheckCircle } from 'react-bootstrap-icons';
+import React, { useState } from 'react';
+import { Form, OverlayTrigger, Tooltip, Button, Card, Row, Col, Collapse } from 'react-bootstrap';
+import { InfoCircle, CheckCircle, ChevronDown, ChevronUp } from 'react-bootstrap-icons';
 
 const OutputOptions = ({ selectedFormats, setSelectedFormats, disabled }) => {
+  // State to track which categories are expanded
+  const [expandedCategories, setExpandedCategories] = useState(['Feature Graphic']);
+  
+  // Toggle category expansion
+  const toggleCategory = (category) => {
+    if (expandedCategories.includes(category)) {
+      setExpandedCategories(expandedCategories.filter(cat => cat !== category));
+    } else {
+      setExpandedCategories([...expandedCategories, category]);
+    }
+  };
   const formatGroups = [
     {
       title: "Installer Images",
@@ -42,7 +53,7 @@ const OutputOptions = ({ selectedFormats, setSelectedFormats, disabled }) => {
       formats: [
         // Feature Graphic
         { 
-          id: 'FeatureGraphic.png', 
+          id: 'Feature Graphic.png', 
           label: 'Feature Graphic (1024×500)',
           tooltip: 'Feature graphic for app stores and promotional materials'
         },
@@ -255,224 +266,395 @@ const OutputOptions = ({ selectedFormats, setSelectedFormats, disabled }) => {
       )}
       
       {group.title === "Online Images" ? (
-        // For Online Images, group by categories
+        // For Online Images, group by categories with collapsible sections
         <>
-          <h6 className="format-category-heading">Feature Graphic</h6>
-          {group.formats.slice(0, 1).map((format) => (
-            <Form.Check
-              key={format.id}
-              type="checkbox"
-              id={`format-${format.id}`}
-              label={
-                <>
-                  {format.label}
-                  <OverlayTrigger
-                    placement="right"
-                    overlay={<Tooltip>{format.tooltip}</Tooltip>}
-                  >
-                    <InfoCircle size={12} className="tooltip-icon" />
-                  </OverlayTrigger>
-                </>
-              }
-              checked={selectedFormats[format.id]}
-              onChange={() => handleCheckboxChange(format.id)}
-              className="format-checkbox"
-              disabled={disabled}
-            />
-          ))}
+          {/* Feature Graphic Category */}
+          <div className="format-category mb-2">
+            <Button
+              onClick={() => toggleCategory('Feature Graphic')}
+              variant="link"
+              className="format-category-toggle w-100 text-start p-1"
+              aria-expanded={expandedCategories.includes('Feature Graphic')}
+            >
+              <div className="d-flex justify-content-between align-items-center">
+                <h6 className="format-category-heading mb-0">Feature Graphic</h6>
+                <span>{expandedCategories.includes('Feature Graphic') ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</span>
+              </div>
+            </Button>
+            
+            <Collapse in={expandedCategories.includes('Feature Graphic')}>
+              <div>
+                <Row className="mx-0">
+                  {group.formats.slice(0, 1).map((format) => (
+                    <Col md={6} lg={4} key={format.id}>
+                      <Form.Check
+                        type="checkbox"
+                        id={`format-${format.id}`}
+                        label={
+                          <>
+                            {format.label}
+                            <OverlayTrigger
+                              placement="right"
+                              overlay={<Tooltip>{format.tooltip}</Tooltip>}
+                            >
+                              <InfoCircle size={12} className="tooltip-icon" />
+                            </OverlayTrigger>
+                          </>
+                        }
+                        checked={selectedFormats[format.id]}
+                        onChange={() => handleCheckboxChange(format.id)}
+                        className="format-checkbox"
+                        disabled={disabled}
+                      />
+                    </Col>
+                  ))}
+                </Row>
+              </div>
+            </Collapse>
+          </div>
           
-          <h6 className="format-category-heading">Push</h6>
-          {group.formats.slice(1, 2).map((format) => (
-            <Form.Check
-              key={format.id}
-              type="checkbox"
-              id={`format-${format.id}`}
-              label={
-                <>
-                  {format.label}
-                  <OverlayTrigger
-                    placement="right"
-                    overlay={<Tooltip>{format.tooltip}</Tooltip>}
-                  >
-                    <InfoCircle size={12} className="tooltip-icon" />
-                  </OverlayTrigger>
-                </>
-              }
-              checked={selectedFormats[format.id]}
-              onChange={() => handleCheckboxChange(format.id)}
-              className="format-checkbox"
-              disabled={disabled}
-            />
-          ))}
+          {/* Push Category */}
+          <div className="format-category mb-2">
+            <Button
+              onClick={() => toggleCategory('Push')}
+              variant="link"
+              className="format-category-toggle w-100 text-start p-1"
+              aria-expanded={expandedCategories.includes('Push')}
+            >
+              <div className="d-flex justify-content-between align-items-center">
+                <h6 className="format-category-heading mb-0">Push</h6>
+                <span>{expandedCategories.includes('Push') ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</span>
+              </div>
+            </Button>
+            
+            <Collapse in={expandedCategories.includes('Push')}>
+              <div>
+                <Row className="mx-0">
+                  {group.formats.slice(1, 2).map((format) => (
+                    <Col md={6} lg={4} key={format.id}>
+                      <Form.Check
+                        type="checkbox"
+                        id={`format-${format.id}`}
+                        label={
+                          <>
+                            {format.label}
+                            <OverlayTrigger
+                              placement="right"
+                              overlay={<Tooltip>{format.tooltip}</Tooltip>}
+                            >
+                              <InfoCircle size={12} className="tooltip-icon" />
+                            </OverlayTrigger>
+                          </>
+                        }
+                        checked={selectedFormats[format.id]}
+                        onChange={() => handleCheckboxChange(format.id)}
+                        className="format-checkbox"
+                        disabled={disabled}
+                      />
+                    </Col>
+                  ))}
+                </Row>
+              </div>
+            </Collapse>
+          </div>
           
-          <h6 className="format-category-heading">Logo</h6>
-          {group.formats.slice(2, 6).map((format) => (
-            <Form.Check
-              key={format.id}
-              type="checkbox"
-              id={`format-${format.id}`}
-              label={
-                <>
-                  {format.label}
-                  <OverlayTrigger
-                    placement="right"
-                    overlay={<Tooltip>{format.tooltip}</Tooltip>}
-                  >
-                    <InfoCircle size={12} className="tooltip-icon" />
-                  </OverlayTrigger>
-                </>
-              }
-              checked={selectedFormats[format.id]}
-              onChange={() => handleCheckboxChange(format.id)}
-              className="format-checkbox"
-              disabled={disabled}
-            />
-          ))}
+          {/* Logo Category */}
+          <div className="format-category mb-2">
+            <Button
+              onClick={() => toggleCategory('Logo')}
+              variant="link"
+              className="format-category-toggle w-100 text-start p-1"
+              aria-expanded={expandedCategories.includes('Logo')}
+            >
+              <div className="d-flex justify-content-between align-items-center">
+                <h6 className="format-category-heading mb-0">Logo</h6>
+                <span>{expandedCategories.includes('Logo') ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</span>
+              </div>
+            </Button>
+            
+            <Collapse in={expandedCategories.includes('Logo')}>
+              <div>
+                <Row className="mx-0">
+                  {group.formats.slice(2, 6).map((format) => (
+                    <Col md={6} lg={4} key={format.id}>
+                      <Form.Check
+                        type="checkbox"
+                        id={`format-${format.id}`}
+                        label={
+                          <>
+                            {format.label}
+                            <OverlayTrigger
+                              placement="right"
+                              overlay={<Tooltip>{format.tooltip}</Tooltip>}
+                            >
+                              <InfoCircle size={12} className="tooltip-icon" />
+                            </OverlayTrigger>
+                          </>
+                        }
+                        checked={selectedFormats[format.id]}
+                        onChange={() => handleCheckboxChange(format.id)}
+                        className="format-checkbox"
+                        disabled={disabled}
+                      />
+                    </Col>
+                  ))}
+                </Row>
+              </div>
+            </Collapse>
+          </div>
           
-          <h6 className="format-category-heading">Appicon</h6>
-          {group.formats.slice(6, 14).map((format) => (
-            <Form.Check
-              key={format.id}
-              type="checkbox"
-              id={`format-${format.id}`}
-              label={
-                <>
-                  {format.label}
-                  <OverlayTrigger
-                    placement="right"
-                    overlay={<Tooltip>{format.tooltip}</Tooltip>}
-                  >
-                    <InfoCircle size={12} className="tooltip-icon" />
-                  </OverlayTrigger>
-                </>
-              }
-              checked={selectedFormats[format.id]}
-              onChange={() => handleCheckboxChange(format.id)}
-              className="format-checkbox"
-              disabled={disabled}
-            />
-          ))}
+          {/* Appicon Category */}
+          <div className="format-category mb-2">
+            <Button
+              onClick={() => toggleCategory('Appicon')}
+              variant="link"
+              className="format-category-toggle w-100 text-start p-1"
+              aria-expanded={expandedCategories.includes('Appicon')}
+            >
+              <div className="d-flex justify-content-between align-items-center">
+                <h6 className="format-category-heading mb-0">Appicon</h6>
+                <span>{expandedCategories.includes('Appicon') ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</span>
+              </div>
+            </Button>
+            
+            <Collapse in={expandedCategories.includes('Appicon')}>
+              <div>
+                <Row className="mx-0">
+                  {group.formats.slice(6, 14).map((format) => (
+                    <Col md={6} lg={4} key={format.id}>
+                      <Form.Check
+                        type="checkbox"
+                        id={`format-${format.id}`}
+                        label={
+                          <>
+                            {format.label}
+                            <OverlayTrigger
+                              placement="right"
+                              overlay={<Tooltip>{format.tooltip}</Tooltip>}
+                            >
+                              <InfoCircle size={12} className="tooltip-icon" />
+                            </OverlayTrigger>
+                          </>
+                        }
+                        checked={selectedFormats[format.id]}
+                        onChange={() => handleCheckboxChange(format.id)}
+                        className="format-checkbox"
+                        disabled={disabled}
+                      />
+                    </Col>
+                  ))}
+                </Row>
+              </div>
+            </Collapse>
+          </div>
           
-          <h6 className="format-category-heading">Default Large</h6>
-          {group.formats.slice(14, 18).map((format) => (
-            <Form.Check
-              key={format.id}
-              type="checkbox"
-              id={`format-${format.id}`}
-              label={
-                <>
-                  {format.label}
-                  <OverlayTrigger
-                    placement="right"
-                    overlay={<Tooltip>{format.tooltip}</Tooltip>}
-                  >
-                    <InfoCircle size={12} className="tooltip-icon" />
-                  </OverlayTrigger>
-                </>
-              }
-              checked={selectedFormats[format.id]}
-              onChange={() => handleCheckboxChange(format.id)}
-              className="format-checkbox"
-              disabled={disabled}
-            />
-          ))}
+          {/* Default Large Category */}
+          <div className="format-category mb-2">
+            <Button
+              onClick={() => toggleCategory('Default Large')}
+              variant="link"
+              className="format-category-toggle w-100 text-start p-1"
+              aria-expanded={expandedCategories.includes('Default Large')}
+            >
+              <div className="d-flex justify-content-between align-items-center">
+                <h6 className="format-category-heading mb-0">Default Large</h6>
+                <span>{expandedCategories.includes('Default Large') ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</span>
+              </div>
+            </Button>
+            
+            <Collapse in={expandedCategories.includes('Default Large')}>
+              <div>
+                <Row className="mx-0">
+                  {group.formats.slice(14, 18).map((format) => (
+                    <Col md={6} lg={4} key={format.id}>
+                      <Form.Check
+                        type="checkbox"
+                        id={`format-${format.id}`}
+                        label={
+                          <>
+                            {format.label}
+                            <OverlayTrigger
+                              placement="right"
+                              overlay={<Tooltip>{format.tooltip}</Tooltip>}
+                            >
+                              <InfoCircle size={12} className="tooltip-icon" />
+                            </OverlayTrigger>
+                          </>
+                        }
+                        checked={selectedFormats[format.id]}
+                        onChange={() => handleCheckboxChange(format.id)}
+                        className="format-checkbox"
+                        disabled={disabled}
+                      />
+                    </Col>
+                  ))}
+                </Row>
+              </div>
+            </Collapse>
+          </div>
           
-          <h6 className="format-category-heading">Default XL</h6>
-          {group.formats.slice(18, 21).map((format) => (
-            <Form.Check
-              key={format.id}
-              type="checkbox"
-              id={`format-${format.id}`}
-              label={
-                <>
-                  {format.label}
-                  <OverlayTrigger
-                    placement="right"
-                    overlay={<Tooltip>{format.tooltip}</Tooltip>}
-                  >
-                    <InfoCircle size={12} className="tooltip-icon" />
-                  </OverlayTrigger>
-                </>
-              }
-              checked={selectedFormats[format.id]}
-              onChange={() => handleCheckboxChange(format.id)}
-              className="format-checkbox"
-              disabled={disabled}
-            />
-          ))}
+          {/* Default XL Category */}
+          <div className="format-category mb-2">
+            <Button
+              onClick={() => toggleCategory('Default XL')}
+              variant="link"
+              className="format-category-toggle w-100 text-start p-1"
+              aria-expanded={expandedCategories.includes('Default XL')}
+            >
+              <div className="d-flex justify-content-between align-items-center">
+                <h6 className="format-category-heading mb-0">Default XL</h6>
+                <span>{expandedCategories.includes('Default XL') ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</span>
+              </div>
+            </Button>
+            
+            <Collapse in={expandedCategories.includes('Default XL')}>
+              <div>
+                <Row className="mx-0">
+                  {group.formats.slice(18, 21).map((format) => (
+                    <Col md={6} lg={4} key={format.id}>
+                      <Form.Check
+                        type="checkbox"
+                        id={`format-${format.id}`}
+                        label={
+                          <>
+                            {format.label}
+                            <OverlayTrigger
+                              placement="right"
+                              overlay={<Tooltip>{format.tooltip}</Tooltip>}
+                            >
+                              <InfoCircle size={12} className="tooltip-icon" />
+                            </OverlayTrigger>
+                          </>
+                        }
+                        checked={selectedFormats[format.id]}
+                        onChange={() => handleCheckboxChange(format.id)}
+                        className="format-checkbox"
+                        disabled={disabled}
+                      />
+                    </Col>
+                  ))}
+                </Row>
+              </div>
+            </Collapse>
+          </div>
           
-          <h6 className="format-category-heading">Default</h6>
-          {group.formats.slice(21, 23).map((format) => (
-            <Form.Check
-              key={format.id}
-              type="checkbox"
-              id={`format-${format.id}`}
-              label={
-                <>
-                  {format.label}
-                  <OverlayTrigger
-                    placement="right"
-                    overlay={<Tooltip>{format.tooltip}</Tooltip>}
-                  >
-                    <InfoCircle size={12} className="tooltip-icon" />
-                  </OverlayTrigger>
-                </>
-              }
-              checked={selectedFormats[format.id]}
-              onChange={() => handleCheckboxChange(format.id)}
-              className="format-checkbox"
-              disabled={disabled}
-            />
-          ))}
+          {/* Default Category */}
+          <div className="format-category mb-2">
+            <Button
+              onClick={() => toggleCategory('Default')}
+              variant="link"
+              className="format-category-toggle w-100 text-start p-1"
+              aria-expanded={expandedCategories.includes('Default')}
+            >
+              <div className="d-flex justify-content-between align-items-center">
+                <h6 className="format-category-heading mb-0">Default</h6>
+                <span>{expandedCategories.includes('Default') ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</span>
+              </div>
+            </Button>
+            
+            <Collapse in={expandedCategories.includes('Default')}>
+              <div>
+                <Row className="mx-0">
+                  {group.formats.slice(21, 23).map((format) => (
+                    <Col md={6} lg={4} key={format.id}>
+                      <Form.Check
+                        type="checkbox"
+                        id={`format-${format.id}`}
+                        label={
+                          <>
+                            {format.label}
+                            <OverlayTrigger
+                              placement="right"
+                              overlay={<Tooltip>{format.tooltip}</Tooltip>}
+                            >
+                              <InfoCircle size={12} className="tooltip-icon" />
+                            </OverlayTrigger>
+                          </>
+                        }
+                        checked={selectedFormats[format.id]}
+                        onChange={() => handleCheckboxChange(format.id)}
+                        className="format-checkbox"
+                        disabled={disabled}
+                      />
+                    </Col>
+                  ))}
+                </Row>
+              </div>
+            </Collapse>
+          </div>
           
-          <h6 className="format-category-heading">Miscellaneous</h6>
-          {group.formats.slice(23).map((format) => (
-            <Form.Check
-              key={format.id}
-              type="checkbox"
-              id={`format-${format.id}`}
-              label={
-                <>
-                  {format.label}
-                  <OverlayTrigger
-                    placement="right"
-                    overlay={<Tooltip>{format.tooltip}</Tooltip>}
-                  >
-                    <InfoCircle size={12} className="tooltip-icon" />
-                  </OverlayTrigger>
-                </>
-              }
-              checked={selectedFormats[format.id]}
-              onChange={() => handleCheckboxChange(format.id)}
-              className="format-checkbox"
-              disabled={disabled}
-            />
-          ))}
+          {/* Miscellaneous Category */}
+          <div className="format-category mb-2">
+            <Button
+              onClick={() => toggleCategory('Miscellaneous')}
+              variant="link"
+              className="format-category-toggle w-100 text-start p-1"
+              aria-expanded={expandedCategories.includes('Miscellaneous')}
+            >
+              <div className="d-flex justify-content-between align-items-center">
+                <h6 className="format-category-heading mb-0">Miscellaneous</h6>
+                <span>{expandedCategories.includes('Miscellaneous') ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</span>
+              </div>
+            </Button>
+            
+            <Collapse in={expandedCategories.includes('Miscellaneous')}>
+              <div>
+                <Row className="mx-0">
+                  {group.formats.slice(23).map((format) => (
+                    <Col md={6} lg={4} key={format.id}>
+                      <Form.Check
+                        type="checkbox"
+                        id={`format-${format.id}`}
+                        label={
+                          <>
+                            {format.label}
+                            <OverlayTrigger
+                              placement="right"
+                              overlay={<Tooltip>{format.tooltip}</Tooltip>}
+                            >
+                              <InfoCircle size={12} className="tooltip-icon" />
+                            </OverlayTrigger>
+                          </>
+                        }
+                        checked={selectedFormats[format.id]}
+                        onChange={() => handleCheckboxChange(format.id)}
+                        className="format-checkbox"
+                        disabled={disabled}
+                      />
+                    </Col>
+                  ))}
+                </Row>
+              </div>
+            </Collapse>
+          </div>
         </>
       ) : (
-        // For other groups, render normally
-        group.formats.map((format) => (
-          <Form.Check
-            key={format.id}
-            type="checkbox"
-            id={`format-${format.id}`}
-            label={
-              <>
-                {format.label}
-                <OverlayTrigger
-                  placement="right"
-                  overlay={<Tooltip>{format.tooltip}</Tooltip>}
-                >
-                  <InfoCircle size={12} className="tooltip-icon" />
-                </OverlayTrigger>
-              </>
-            }
-            checked={selectedFormats[format.id]}
-            onChange={() => handleCheckboxChange(format.id)}
-            className="format-checkbox"
-            disabled={disabled}
-          />
-        ))
+        // For other groups (like Installer Images), render in a grid layout
+        <Row className="mx-0">
+          {group.formats.map((format) => (
+            <Col md={6} lg={4} key={format.id}>
+              <Form.Check
+                type="checkbox"
+                id={`format-${format.id}`}
+                label={
+                  <>
+                    {format.label}
+                    <OverlayTrigger
+                      placement="right"
+                      overlay={<Tooltip>{format.tooltip}</Tooltip>}
+                    >
+                      <InfoCircle size={12} className="tooltip-icon" />
+                    </OverlayTrigger>
+                  </>
+                }
+                checked={selectedFormats[format.id]}
+                onChange={() => handleCheckboxChange(format.id)}
+                className="format-checkbox"
+                disabled={disabled}
+              />
+            </Col>
+          ))}
+        </Row>
       )}
     </Card.Body>            
           </Card>
