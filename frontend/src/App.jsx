@@ -15,7 +15,8 @@ import StepIndicator from './components/StepIndicator';
 
 // Import services
 // Comment out unused services until we implement the backend functionality
-// import { uploadFileToBlob, processImage, getProcessedImage } from './services/BlobService';
+// eslint-disable-next-line no-unused-vars
+import { uploadFileToBlob, processImage, getProcessedImage } from './services/BlobService';
 
 function App() {
   // State management
@@ -143,36 +144,32 @@ function App() {
     setActiveResult(null);
 
     try {
-      // For demo purposes, we'll simulate the processing
-      // In production, you would use the actual API calls
+      // Generate a unique filename for the blob
+      const timestamp = new Date().getTime();
+      const filename = `${timestamp}_${currentFile.name}`;
       
-      // Simulate processing delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Upload the image to blob storage
+      const blobUrl = await uploadFileToBlob(currentFile, filename);
+      setProgress(25); // Update progress after upload
       
-      const downloadedImages = [];
+      // Send selected formats to process
+      const formatsToProcess = {};
+      formatKeys.forEach(key => {
+        formatsToProcess[key] = true;
+      });
       
-      for (let i = 0; i < formatKeys.length; i++) {
-        const format = formatKeys[i];
-        // Create a simulated result
-        const dimensions = getFormatDimensions(format);
-        
-        // We're using the same preview image for demo
-        downloadedImages.push({
-          name: format,
-          url: preview,
-          size: `${dimensions.width}×${dimensions.height}`,
-          dimensions: dimensions
-        });
-        
-        // Update progress
-        setProgress(((i + 1) / formatKeys.length) * 100);
-        
-        // Add a small delay between formats
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
+      // Process the image
+      const result = await processImage(blobUrl, formatsToProcess);
+      setProgress(75); // Update progress after processing
+      
+      // Get processed images
+      const downloadedImages = result.processedImages;
       
       setProcessedImages(downloadedImages);
-      setActiveResult(downloadedImages[0]); // Set first result as active
+      if (downloadedImages.length > 0) {
+        setActiveResult(downloadedImages[0]); // Set first result as active
+      }
+      
       setStatusMessage('Processing complete! Your images are ready.');
       setActiveStep(3); // Move to final step after processing
     } catch (err) {
@@ -181,10 +178,12 @@ function App() {
       setStatusMessage(`Error: ${err.message || 'An error occurred during processing'}`);
     } finally {
       setIsProcessing(false);
+      setProgress(100);
     }
   };
 
   // Helper function to get dimensions for format
+  // eslint-disable-next-line no-unused-vars
   const getFormatDimensions = (format) => {
     switch(format) {
       case 'Logo.png': return { width: 300, height: 300 };
