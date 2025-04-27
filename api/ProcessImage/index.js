@@ -4,7 +4,7 @@ const fetch = require('node-fetch');
 
 module.exports = async function (context, req) {
     try {
-        // Check if the request contains required fields
+        // Validate request
         if (!req.body || !req.body.sourceUrl || !req.body.formats) {
             context.res = {
                 status: 400,
@@ -12,31 +12,25 @@ module.exports = async function (context, req) {
             };
             return;
         }
-        
-        // Extract source URL and formats
+
         const { sourceUrl, formats } = req.body;
-        
-        // Storage account details
-        const accountName = 'logocraftstorage'; // Replace with your actual storage account name
+
+        const accountName = 'logocraftstorage2200'; // Your storage account
         const accountKey = process.env.STORAGE_ACCOUNT_KEY;
         const outputContainer = 'output-images';
-        
-        // Log the received data
+
         context.log('Processing image request', { sourceUrl, formatCount: Object.keys(formats).length });
-        
-        // Create shared key credentials
+
         const sharedKeyCredential = new StorageSharedKeyCredential(accountName, accountKey);
-        
-        // Create Blob service client
+
         const blobServiceClient = new BlobServiceClient(
             `https://${accountName}.blob.core.windows.net`,
             sharedKeyCredential
         );
-        
-        // Get container client for output images
+
         const containerClient = blobServiceClient.getContainerClient(outputContainer);
-        
-        // Download the source image
+
+        // Download the image
         context.log('Downloading source image:', sourceUrl);
         const response = await fetch(sourceUrl);
         if (!response.ok) {
@@ -44,48 +38,42 @@ module.exports = async function (context, req) {
         }
         const imageBuffer = await response.buffer();
         context.log('Source image downloaded successfully');
-        
-        // Process the image for each format
+
         const processedImages = [];
-        
+
         for (const formatKey of Object.keys(formats)) {
             if (formats[formatKey]) {
-                // Get format dimensions
                 const dimensions = getFormatDimensions(formatKey);
                 context.log(`Processing format: ${formatKey} (${dimensions.width}x${dimensions.height})`);
-                
-                // Process image with Sharp
+
                 const processedBuffer = await processImage(imageBuffer, dimensions, formatKey);
-                
-                // Upload processed image to blob storage
+
                 const blobName = `${Date.now()}_${formatKey}`;
                 const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-                
+
                 context.log(`Uploading processed image: ${blobName}`);
                 await blockBlobClient.uploadData(processedBuffer, {
                     blobHTTPHeaders: {
                         blobContentType: formatKey.endsWith('.bmp') ? 'image/bmp' : 'image/png'
                     }
                 });
-                
-                // Add to processed images
+
                 processedImages.push({
                     name: formatKey,
                     url: blockBlobClient.url,
                     size: `${dimensions.width}×${dimensions.height}`,
                     dimensions
                 });
-                
+
                 context.log(`Processed and uploaded: ${formatKey}`);
             }
         }
-        
-        // Return processed images
+
         context.res = {
             status: 200,
             body: { processedImages }
         };
-        
+
         context.log('Processing completed successfully', { processedCount: processedImages.length });
     } catch (error) {
         context.log.error('Error processing image:', error);
@@ -96,9 +84,9 @@ module.exports = async function (context, req) {
     }
 };
 
-// Helper function to get dimensions for format
+// Helper to get dimensions for a given format
 function getFormatDimensions(format) {
-    switch(format) {
+    switch (format) {
         case 'Logo.png': return { width: 300, height: 300 };
         case 'Smalllogo.png': return { width: 136, height: 136 };
         case 'KDlogo.png': return { width: 140, height: 112 };
@@ -135,19 +123,17 @@ function getFormatDimensions(format) {
     }
 }
 
-// Process image with Sharp
+// Helper to process image
 async function processImage(buffer, dimensions, formatKey) {
     let sharpInstance = sharp(buffer);
-    
-    // Resize to dimensions with white background and maintain aspect ratio
+
     sharpInstance = sharpInstance.resize({
         width: dimensions.width,
         height: dimensions.height,
         fit: 'contain',
         background: { r: 255, g: 255, b: 255, alpha: 0 }
     });
-    
-    // Convert to appropriate format
+
     if (formatKey.endsWith('.bmp')) {
         return sharpInstance.toFormat('bmp').toBuffer();
     } else {
