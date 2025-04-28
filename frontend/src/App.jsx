@@ -6,7 +6,7 @@ import './App.css';
 import ImagePreview from './components/ImagePreview';
 import OutputOptions from './components/OutputOptions';
 import ProcessingOptions from './components/ProcessingOptions';
-// import FormatInfo from './components/FormatInfo'; // Removed Import
+// FormatInfo removed
 import StatusBar from './components/StatusBar';
 import MainPreview from './components/MainPreview';
 import StepIndicator from './components/StepIndicator';
@@ -82,7 +82,6 @@ function App() {
 
       const downloadedImages = result.processedImages || [];
       setProcessedImages(downloadedImages);
-      // setActiveResult(downloadedImages.length > 0 ? downloadedImages[0] : null); // Not displaying preview now
       setActiveStep(3);
 
       if (downloadedImages.length > 0) {
@@ -110,7 +109,6 @@ function App() {
     }
   };
 
-  // eslint-disable-next-line no-unused-vars
   const getFormatDimensions = (format) => {
     switch(format) {
         case 'Logo.png': return { width: 300, height: 300 }; case 'Smalllogo.png': return { width: 136, height: 136 };
@@ -134,10 +132,11 @@ function App() {
   };
 
   return (
-    <Container fluid className="app-container centered-container">
+    <Container fluid className="app-container centered-container py-4 py-lg-5">
       <div className="logo-header">
         <h1 className="app-title">LogoCraft Web</h1>
-        <p className="text-center text-muted">Convert your logos to multiple formats with just a few clicks</p>
+        {/* Added className="app-subtitle" here */}
+        <p className="app-subtitle text-center text-muted">Convert your logos to multiple formats with just a few clicks</p>
       </div>
       <StepIndicator
         activeStep={activeStep}
@@ -145,33 +144,33 @@ function App() {
       />
       {error && ( <Alert variant="danger" onClose={() => setError(null)} dismissible className="mx-md-4 my-2"> {error} </Alert> )}
 
-      <Row className="content-wrapper gx-md-4">
-        <Col lg={4} md={5} className="mb-4">
-          <div className={`panel ${activeStep === 1 ? 'panel-active' : ''}`}>
+      <Row className="content-wrapper gx-md-4 gy-4">
+        <Col lg={4} md={5} className="mb-lg-0">
+          <div className={`panel shadow-sm ${activeStep === 1 ? 'panel-active' : ''}`}>
             <div className="panel-header">
               <h3 className="panel-title"> <Badge bg={activeStep === 1 ? "primary" : "secondary"} className="step-badge">1</Badge> Image Upload </h3>
             </div>
-            <div className="panel-body d-flex flex-column">
+            <div className="panel-body p-4">
               <ImagePreview preview={preview} onFileSelect={handleFileSelect} onRemoveImage={handleRemoveImage} imageSize={imageSize} fileName={currentFile?.name} />
             </div>
           </div>
         </Col>
 
-        <Col lg={5} md={7} className="mb-4">
-           <div className={`panel ${activeStep === 2 ? 'panel-active' : ''}`}>
+        <Col lg={5} md={7} className="mb-lg-0">
+           <div className={`panel shadow-sm ${activeStep === 2 ? 'panel-active' : ''}`}>
             <div className="panel-header">
               <h3 className="panel-title"> <Badge bg={activeStep === 2 ? "primary" : "secondary"} className="step-badge">2</Badge> Export Options </h3>
             </div>
-            <div className="panel-body">
+            <div className="panel-body p-4">
               <OutputOptions selectedFormats={selectedFormats} setSelectedFormats={setSelectedFormats} disabled={!currentFile || isProcessing || activeStep === 3} />
             </div>
           </div>
         </Col>
 
-        <Col lg={3} md={12} className="mb-4">
-           <div className={`panel ${activeStep === 2 ? 'panel-active' : ''}`}>
+        <Col lg={3} md={12} className="mb-lg-0">
+           <div className={`panel shadow-sm ${activeStep === 2 ? 'panel-active' : ''}`}>
             <div className="panel-header"> <h3 className="panel-title">Processing</h3> </div>
-            <div className="panel-body">
+            <div className="panel-body p-4">
               <ProcessingOptions outputDir={outputDir} setOutputDir={setOutputDir} onProcess={handleProcessAndDownload} isProcessing={isProcessing} progress={progress} disabled={!currentFile || !hasSelectedFormats || isProcessing || activeStep === 3} />
                {activeStep === 3 && processedImages.length > 0 && !isProcessing && (
                  <Alert variant="success" className="mt-3 small p-2">
@@ -187,10 +186,6 @@ function App() {
           </div>
         </Col>
       </Row>
-
-      {/* Format Info Footnote Area Removed */}
-
-      {/* MainPreview component is removed from the main layout */}
 
       <StatusBar message={statusMessage} />
 
