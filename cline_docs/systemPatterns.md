@@ -9,9 +9,13 @@ LogoCraftWeb is built as a React-based web application with a clear separation b
    - Utilizes Bootstrap for responsive layout and styling
    - Vite is used as the build tool and development server
 
-2. **Backend**: API service (currently simulated in the frontend)
-   - Planned to handle image processing and storage
-   - Will provide RESTful endpoints for the frontend to interact with
+2. **Backend**: Azure Functions serverless API
+   - Handles image processing and storage operations
+   - Provides RESTful endpoints for the frontend to interact with
+   - Uses Azure Blob Storage for image storage
+   - Implements two main functions:
+     - GetSasToken: Generates SAS tokens for secure blob storage access
+     - ProcessImage: Handles image processing with the Sharp library
 
 ## Key technical decisions
 1. **Component Structure**: The UI is divided into modular components, each responsible for a specific part of the functionality:
@@ -28,6 +32,17 @@ LogoCraftWeb is built as a React-based web application with a clear separation b
 3. **Styling Approach**: Uses a combination of Bootstrap components and custom CSS
    - Bootstrap provides the responsive grid system and basic components
    - Custom CSS in App.css handles specific styling needs and overrides
+
+4. **Serverless Architecture**: Uses Azure Functions for backend processing
+   - Event-driven, scalable compute service
+   - Pay-per-execution model for cost efficiency
+   - Stateless functions that can scale independently
+   - HTTP-triggered functions for RESTful API endpoints
+
+5. **Cloud Storage**: Uses Azure Blob Storage for image files
+   - Secure access via SAS tokens
+   - Separate containers for input and output images
+   - Scalable storage for varying workloads
 
 ## Architecture patterns
 1. **Three-Step Workflow**: The application follows a clear three-step process:
@@ -47,3 +62,13 @@ LogoCraftWeb is built as a React-based web application with a clear separation b
 4. **Responsive Design**: The layout adapts to different screen sizes
    - On larger screens, the two-column layout is maintained
    - On smaller screens, the layout shifts to a more vertical orientation
+
+5. **Microservices Pattern**: Backend functionality is divided into focused, single-purpose functions
+   - GetSasToken: Handles authentication and authorization for blob storage
+   - ProcessImage: Focuses on image transformation and processing
+   - Each function can be deployed, scaled, and maintained independently
+
+6. **API-First Design**: Clear separation between frontend and backend
+   - RESTful API endpoints for all backend operations
+   - Frontend communicates with backend exclusively through these APIs
+   - Enables independent development and testing of frontend and backend components

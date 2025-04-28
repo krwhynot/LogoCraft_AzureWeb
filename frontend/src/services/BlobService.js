@@ -1,8 +1,16 @@
 // frontend/src/services/BlobService.js
-const BASE_URL = '/api'; // This will connect to your Azure Functions via proxy
 
-// For local development, you could use:
-// const BASE_URL = 'http://localhost:7071/api'; 
+let BASE_URL;
+
+// Check Vite's built-in flag for production mode
+if (import.meta.env.PROD) { 
+  // Use the deployed Azure Function URL
+  BASE_URL = 'https://logocraftfunctions.azurewebsites.net/api'; 
+  // IMPORTANT: Consider function keys/codes if needed
+} else {
+  // Use the local Function URL for development (import.meta.env.DEV would be true here)
+  BASE_URL = 'http://localhost:7071/api';
+}
 
 export const getBlobSasToken = async () => {
   try {

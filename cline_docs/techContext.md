@@ -16,9 +16,12 @@
    - Bootstrap grid system and components
    - Media queries for responsive design
 
-4. **Future Backend** (currently simulated):
-   - RESTful API (planned)
-   - Blob storage for image processing and storage (referenced in BlobService.js)
+4. **Backend**:
+   - Azure Functions (serverless compute service)
+   - Azure Blob Storage (for image storage)
+   - Node.js with JavaScript
+   - Sharp library for image processing
+   - Azure Storage SDK (@azure/storage-blob)
 
 ## Development setup
 1. **Project Structure**:
@@ -28,16 +31,26 @@
        - `/services`: Service modules for API interactions
        - `/assets`: Static assets like images
      - `/public`: Public static files
-   - `/api`: Placeholder for future backend implementation
+   - `/api`: Azure Functions implementation
+     - `/GetSasToken`: Function for generating SAS tokens for blob storage
+       - `function.json`: Function bindings configuration
+       - `index.js`: Function implementation
+     - `/ProcessImage`: Function for image processing
+       - `function.json`: Function bindings configuration
+       - `index.js`: Function implementation
+     - `host.json`: Azure Functions host configuration
+     - `package.json`: Node.js dependencies
    - `/infrastructure`: Placeholder for deployment and infrastructure code
 
 2. **Build System**:
-   - Vite for fast development and optimized production builds
+   - Vite for frontend development and optimized production builds
+   - Azure Functions Core Tools for local function development
    - NPM for package management
 
 3. **Development Workflow**:
-   - Local development server with hot module replacement
-   - Component-based development approach
+   - Local development server with hot module replacement for frontend
+   - Azure Functions local runtime for backend testing
+   - VS Code Azure Functions extension for deployment
 
 ## Technical constraints
 1. **Browser Compatibility**:
@@ -46,10 +59,17 @@
 
 2. **Performance Considerations**:
    - Image processing is resource-intensive
-   - Currently simulated in the frontend, will be moved to backend
+   - Azure Functions consumption plan has execution time limits
+   - Blob storage operations may have latency
    - UI should remain responsive during processing operations
 
-3. **Limitations**:
+3. **Azure Functions Requirements**:
+   - Function folders must be directly under the project root
+   - Each function folder must contain function.json and index.js
+   - host.json must be in the project root with version 2.0
+   - Proper HTTP trigger bindings required for web API endpoints
+
+4. **Limitations**:
    - Maximum image size: 20MB (as indicated in the UI)
    - Supported image formats: PNG, JPEG, GIF, BMP, TIFF, WebP
    - Currently no user authentication or persistent storage
