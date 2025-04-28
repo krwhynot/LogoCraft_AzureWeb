@@ -1,3 +1,4 @@
+// LogoCraftWeb/frontend/src/App.jsx
 import React, { useState } from 'react';
 import { Container, Row, Col, Alert, Badge } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -21,14 +22,38 @@ function App() {
   const [preview, setPreview] = useState(null);
   const [imageSize, setImageSize] = useState(null);
   const [selectedFormats, setSelectedFormats] = useState({
-    'Logo.png': true, 'Smalllogo.png': true, 'KDlogo.png': true, 'RPTlogo.bmp': true,
-    'PRINTLOGO.bmp': true, 'Feature Graphic.png': true, 'hpns.png': true, 'loginLogo.png': true,
-    'logo.png': true, 'logo@2x.png': true, 'logo@3x.png': true, 'appicon-60.png': true,
-    'appicon-60@2x.png': true, 'appicon-60@3x.png': true, 'appicon.png': true, 'appicon-512.png': true,
-    'appicon@2x.png': true, 'default_app_logo.png': true, 'DefaultIcon.png': true, 'default-large.png': true,
-    'Default-568h@2x.png': true, 'Default-677h@2x.png': true, 'Default-736h@3x.png': true, 'Default-Portrait-1792h@2x.png': true,
-    'Default-Portrait-2436h@3x.png': true, 'Default-Portrait-2688h@3x.png': true, 'Default.png': true, 'Default@2x.png': true,
-    'CarryoutBtn.png': true, 'DeliveryBtn.png': true, 'FutureBtn.png': true, 'NowBtn.png': true
+    'Logo.png': false,
+    'Smalllogo.png': false,
+    'KDlogo.png': false,
+    'RPTlogo.bmp': false,
+    'PRINTLOGO.bmp': false,
+    'Feature Graphic.png': false,
+    'hpns.png': false,
+    'loginLogo.png': false,
+    'logo.png': false,
+    'logo@2x.png': false,
+    'logo@3x.png': false,
+    'appicon-60.png': false,
+    'appicon-60@2x.png': false,
+    'appicon-60@3x.png': false,
+    'appicon.png': false,
+    'appicon-512.png': false,
+    'appicon@2x.png': false,
+    'default_app_logo.png': false,
+    'DefaultIcon.png': false,
+    'default-large.png': false,
+    'Default-568h@2x.png': false,
+    'Default-677h@2x.png': false,
+    'Default-736h@3x.png': false,
+    'Default-Portrait-1792h@2x.png': false,
+    'Default-Portrait-2436h@3x.png': false,
+    'Default-Portrait-2688h@3x.png': false,
+    'Default.png': false,
+    'Default@2x.png': false,
+    'CarryoutBtn.png': false,
+    'DeliveryBtn.png': false,
+    'FutureBtn.png': false,
+    'NowBtn.png': false
   });
   const [outputDir, setOutputDir] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -43,10 +68,13 @@ function App() {
     setCurrentFile(null); setPreview(null); setImageSize(null); setOutputDir('');
     setProcessedImages([]); setActiveResult(null); setStatusMessage('Ready to start. Select an image to begin.');
     setActiveStep(1); setError(null); setIsProcessing(false); setProgress(0);
+    // Optionally reset format selections too if desired:
+    // const initialFormats = { /* ... define initial state again ... */ };
+    // setSelectedFormats(initialFormats);
   };
 
   const handleFileSelect = (file) => {
-    handleReset();
+    handleReset(); // Reset state when a new file is selected
     setCurrentFile(file);
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -68,7 +96,7 @@ function App() {
     if (formatKeys.length === 0) { setError('Please select at least one output format'); setStatusMessage('Please select at least one output format'); return; }
 
     setIsProcessing(true); setProgress(0); setStatusMessage('Starting process...'); setError(null);
-    setProcessedImages([]); setActiveResult(null); let didDownloadStart = false;
+    setProcessedImages([]); setActiveResult(null); let didDownloadStart = false; // Keep track if download begins
 
     try {
       const timestamp = new Date().getTime(); const filename = `${timestamp}_${currentFile.name}`;
@@ -87,7 +115,7 @@ function App() {
       if (downloadedImages.length > 0) {
           setStatusMessage("Preparing zip file..."); setProgress(60); const zip = new JSZip(); let fetchedCount = 0;
           for (const image of downloadedImages) {
-            fetchedCount++; setStatusMessage(`Fetching ${image.name} (${fetchedCount}/${downloadedImages.length})...`);
+            fetchedCount++; setStatusMessage(`Workspaceing ${image.name} (${fetchedCount}/${downloadedImages.length})...`);
             const blobData = await getProcessedImage(image.url);
             zip.file(image.name, blobData, { binary: true });
             setProgress(60 + (30 * fetchedCount / downloadedImages.length));
@@ -96,19 +124,33 @@ function App() {
           const zipBlob = await zip.generateAsync({ type: 'blob', compression: "DEFLATE", compressionOptions: { level: 6 } });
           setStatusMessage("Starting download...");
           saveAs(zipBlob, 'logocraft_exports.zip');
-          setStatusMessage("Process complete, download initiated. Resetting...");
-          didDownloadStart = true;
-      } else { setStatusMessage("Processing complete, but no images were generated."); setError("No images were generated based on selected formats."); }
+          setStatusMessage("Process complete, download initiated."); // Message before reset
+          didDownloadStart = true; // Mark download as started
+      } else {
+          setStatusMessage("Processing complete, but no images were generated.");
+          setError("No images were generated based on selected formats.");
+          setActiveStep(2); // Stay in configure step if no results
+      }
     } catch (err) {
-      console.error('Processing or Zipping error:', err); const errorMsg = err.message || 'An error occurred during the process';
-      setError(`Operation failed: ${errorMsg}`); setStatusMessage(`Error: ${errorMsg}`); setActiveStep(2);
+      console.error('Processing or Zipping error:', err);
+      const errorMsg = err.message || 'An error occurred during the process';
+      setError(`Operation failed: ${errorMsg}`);
+      setStatusMessage(`Error: ${errorMsg}`);
+      setActiveStep(2); // Revert to configure step on error
     } finally {
-      setIsProcessing(false); setProgress(100);
-      if (didDownloadStart) { setTimeout(() => { handleReset(); }, 2000); }
-      else { setTimeout(() => { if (!error) setStatusMessage('Ready for next conversion.'); }, 3000); }
+        // **MODIFIED SECTION START**
+        setIsProcessing(false);
+        setProgress(100); // Ensure progress bar shows complete
+        // Always reset after a delay, regardless of success or failure
+        setTimeout(() => {
+          handleReset();
+          // Status message is set inside handleReset now
+        }, 3000); // Use a 3-second delay to allow reading the final status message
+        // **MODIFIED SECTION END**
     }
   };
 
+  // getFormatDimensions function remains the same...
   const getFormatDimensions = (format) => {
     switch(format) {
         case 'Logo.png': return { width: 300, height: 300 }; case 'Smalllogo.png': return { width: 136, height: 136 };
@@ -135,7 +177,6 @@ function App() {
     <Container fluid className="app-container centered-container py-4 py-lg-5">
       <div className="logo-header">
         <h1 className="app-title">LogoCraft Web</h1>
-        {/* Added className="app-subtitle" here */}
         <p className="app-subtitle text-center text-muted">Convert your logos to multiple formats with just a few clicks</p>
       </div>
       <StepIndicator
@@ -145,8 +186,9 @@ function App() {
       {error && ( <Alert variant="danger" onClose={() => setError(null)} dismissible className="mx-md-4 my-2"> {error} </Alert> )}
 
       <Row className="content-wrapper gx-md-4 gy-4">
+        {/* Column 1: Upload */}
         <Col lg={4} md={5} className="mb-lg-0">
-          <div className={`panel shadow-sm ${activeStep === 1 ? 'panel-active' : ''}`}>
+          <div className={`panel shadow-sm h-100 ${activeStep === 1 ? 'panel-active' : ''}`}>
             <div className="panel-header">
               <h3 className="panel-title"> <Badge bg={activeStep === 1 ? "primary" : "secondary"} className="step-badge">1</Badge> Image Upload </h3>
             </div>
@@ -156,34 +198,75 @@ function App() {
           </div>
         </Col>
 
-        <Col lg={5} md={7} className="mb-lg-0">
-           <div className={`panel shadow-sm ${activeStep === 2 ? 'panel-active' : ''}`}>
-            <div className="panel-header">
-              <h3 className="panel-title"> <Badge bg={activeStep === 2 ? "primary" : "secondary"} className="step-badge">2</Badge> Export Options </h3>
-            </div>
-            <div className="panel-body p-4">
-              <OutputOptions selectedFormats={selectedFormats} setSelectedFormats={setSelectedFormats} disabled={!currentFile || isProcessing || activeStep === 3} />
-            </div>
-          </div>
-        </Col>
-
-        <Col lg={3} md={12} className="mb-lg-0">
-           <div className={`panel shadow-sm ${activeStep === 2 ? 'panel-active' : ''}`}>
-            <div className="panel-header"> <h3 className="panel-title">Processing</h3> </div>
-            <div className="panel-body p-4">
-              <ProcessingOptions outputDir={outputDir} setOutputDir={setOutputDir} onProcess={handleProcessAndDownload} isProcessing={isProcessing} progress={progress} disabled={!currentFile || !hasSelectedFormats || isProcessing || activeStep === 3} />
-               {activeStep === 3 && processedImages.length > 0 && !isProcessing && (
-                 <Alert variant="success" className="mt-3 small p-2">
-                   {processedImages.length} image(s) processed & downloaded. Resetting...
-                 </Alert>
-               )}
-               {activeStep === 3 && processedImages.length === 0 && !isProcessing && !error && (
-                 <Alert variant="warning" className="mt-3 small p-2">
-                    Processing finished, but no images were generated.
-                 </Alert>
-               )}
-            </div>
-          </div>
+        {/* Column 2: Configure & Process */}
+        <Col lg={8} md={7}>
+           <Row className="gy-4">
+              {/* Sub-Column 1: Export Options */}
+              <Col lg={8}>
+                 <div className={`panel shadow-sm h-100 ${activeStep === 2 ? 'panel-active' : ''}`}>
+                  <div className="panel-header">
+                    <h3 className="panel-title"> <Badge bg={activeStep === 2 ? "primary" : "secondary"} className="step-badge">2</Badge> Export Options </h3>
+                  </div>
+                  <div className="panel-body p-4">
+                    <OutputOptions
+                      selectedFormats={selectedFormats}
+                      setSelectedFormats={setSelectedFormats}
+                      disabled={!currentFile || isProcessing || activeStep === 3}
+                    />
+                  </div>
+                </div>
+              </Col>
+              {/* Sub-Column 2: Processing */}
+              <Col lg={4}>
+                <div className={`panel shadow-sm h-100 ${activeStep === 2 || activeStep === 3 ? 'panel-active' : ''}`}>
+                  <div className="panel-header">
+                     <h3 className="panel-title"> <Badge bg={activeStep === 3 ? "success" : (activeStep === 2 ? "primary" : "secondary")} className="step-badge">3</Badge> Generate </h3>
+                  </div>
+                  <div className="panel-body p-4 d-flex flex-column justify-content-center"> {/* Center content vertically */}
+                    <ProcessingOptions
+                        outputDir={outputDir}
+                        setOutputDir={setOutputDir}
+                        onProcess={handleProcessAndDownload}
+                        isProcessing={isProcessing}
+                        progress={progress}
+                        disabled={!currentFile || !hasSelectedFormats || isProcessing}
+                    />
+                     {activeStep === 3 && processedImages.length > 0 && !isProcessing && (
+                       <Alert variant="success" className="mt-3 small p-2 text-center">
+                         {processedImages.length} image(s) downloaded. Resetting...
+                       </Alert>
+                     )}
+                     {activeStep === 3 && processedImages.length === 0 && !isProcessing && !error && (
+                       <Alert variant="warning" className="mt-3 small p-2 text-center">
+                          No images generated. Resetting...
+                       </Alert>
+                     )}
+                     {activeStep === 2 && error && !isProcessing && (
+                       <Alert variant="danger" className="mt-3 small p-2 text-center">
+                          Error occurred. Resetting...
+                       </Alert>
+                     )}
+                  </div>
+                </div>
+              </Col>
+           </Row>
+           {/* Results Gallery below Configure & Process */}
+           {processedImages.length > 0 && activeStep === 3 && !isProcessing && (
+              <Row className="mt-4">
+                 <Col>
+                    <div className="panel shadow-sm">
+                       <div className="panel-header">
+                          <h3 className="panel-title">Results Preview</h3>
+                       </div>
+                       <div className="panel-body p-4">
+                          {/* You could potentially put a simplified results view or message here, */}
+                          {/* or just rely on the status bar and the fact that reset is happening. */}
+                          {/* Example: <p>Download complete. Resetting application...</p> */}
+                       </div>
+                    </div>
+                 </Col>
+              </Row>
+           )}
         </Col>
       </Row>
 
