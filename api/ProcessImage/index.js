@@ -1,8 +1,7 @@
-// api/ProcessImage/index.js
 const { BlobServiceClient, StorageSharedKeyCredential } = require('@azure/storage-blob');
 const sharp = require('sharp');
 const fetch = require('node-fetch');
-const fastBmp = require('fast-bmp');
+// No fast-bmp require needed
 
 module.exports = async function (context, req) {
     try {
@@ -39,10 +38,26 @@ module.exports = async function (context, req) {
 
         for (const formatKey of Object.keys(formats)) {
             if (formats[formatKey]) {
-                const dimensions = getFormatDimensions(formatKey);
-                context.log(`Processing format: ${formatKey} (Target: ${dimensions.width}x${dimensions.height})`);
+                const targetDimensions = getFormatDimensions(formatKey);
+                context.log(`Processing format: ${formatKey} (Target: ${targetDimensions.width}x${targetDimensions.height})`);
 
-                const { buffer: processedBuffer, contentType, finalInfo } = await processImage(imageBuffer, dimensions, formatKey, context);
+                let processedBuffer;
+                let contentType;
+                let finalInfo;
+
+                if (formatKey.endsWith('.bmp')) {
+                    // Use the manual BMP creation function
+                    processedBuffer = await createMonochromeBmp(imageBuffer, targetDimensions.width, targetDimensions.height, context);
+                    contentType = 'image/bmp';
+                    // Manual BMP doesn't easily return sharp 'info', use target dimensions
+                    finalInfo = { width: targetDimensions.width, height: targetDimensions.height };
+                } else {
+                    // Use sharp for PNGs
+                    const pngResult = await createPng(imageBuffer, targetDimensions.width, targetDimensions.height, context);
+                    processedBuffer = pngResult.buffer;
+                    contentType = pngResult.contentType;
+                    finalInfo = pngResult.finalInfo;
+                }
 
                 const uniqueBlobName = `${Date.now()}_${formatKey}`;
                 const blockBlobClient = containerClient.getBlockBlobClient(uniqueBlobName);
@@ -78,75 +93,143 @@ module.exports = async function (context, req) {
 };
 
 
-async function processImage(inputBuffer, targetDimensions, formatKey, context) {
-    let isBmpOutput = formatKey.endsWith('.bmp');
-    let outputContentType = isBmpOutput ? 'image/bmp' : 'image/png';
-    let finalInfo;
+// --- Manual 1-bit BMP Creation Helper ---
+async function createMonochromeBmp(inputBuffer, targetWidth, targetHeight, context) {
+    context.log(`Starting manual 1-bit BMP creation for ${targetWidth}x${targetHeight}`);
 
-    let sharpInstance = sharp(inputBuffer);
-
-    if (isBmpOutput) {
-        context.log(`Applying BMP processing chain for ${formatKey}`);
-        sharpInstance = sharpInstance.flatten({ background: 'white' });
-
-        sharpInstance = sharpInstance.resize(targetDimensions.width, targetDimensions.height, {
-            fit: 'contain',
+    // Step 1: Process with Sharp (resize, flatten, grayscale, threshold, get raw)
+    let sharpInstance = sharp(inputBuffer)
+        .flatten({ background: 'white' }) // Ensure opaque before processing
+        .resize(targetWidth, targetHeight, {
+            fit: 'contain', // Fit within target, padding with white
             background: 'white'
-        });
+        })
+        .grayscale() // Convert to single channel
+        .threshold(128); // Binarize (0 or 255)
 
-        sharpInstance = sharpInstance.grayscale().threshold(128);
+    const { data: rawData, info } = await sharpInstance
+        .raw() // Get raw pixel data (should be 1 channel, 8-bit)
+        .toBuffer({ resolveWithObject: true });
 
-        const { data: rawData, info } = await sharpInstance
-            .raw()
-            .toBuffer({ resolveWithObject: true });
-
-        finalInfo = info;
-        context.log(`Raw data for BMP: ${info.width}x${info.height}, channels: ${info.channels}`);
-        if (info.channels !== 1) {
-             context.log.warn(`Expected 1 channel after grayscale/threshold, but got ${info.channels}.`);
-         }
-         if (info.width !== targetDimensions.width || info.height !== targetDimensions.height) {
-             context.log.warn(`Dimension mismatch after resize for BMP: Expected ${targetDimensions.width}x${targetDimensions.height}, Got ${info.width}x${info.height}`);
-         }
-
-        const binaryPixels = Uint8Array.from(rawData, val => val > 128 ? 1 : 0);
-
-        const dpi = 203;
-        const pixelsPerMeter = Math.round(dpi * (1 / 0.0254));
-
-        const bmpEncodeOptions = {
-          width: info.width,
-          height: info.height,
-          data: binaryPixels,
-          bitsPerPixel: 1,
-          xPixelsPerMeter: pixelsPerMeter,
-          yPixelsPerMeter: pixelsPerMeter
-        };
-
-        const bmpUint8Array = fastBmp.encode(bmpEncodeOptions);
-        const finalBuffer = Buffer.from(bmpUint8Array);
-
-        context.log(`BMP encoding finished for ${formatKey}. Output size: ${finalBuffer.length} bytes`);
-        return { buffer: finalBuffer, contentType: outputContentType, finalInfo };
-
-    } else {
-        context.log(`Applying PNG processing chain for ${formatKey}`);
-
-        sharpInstance = sharpInstance.resize(targetDimensions.width, targetDimensions.height, {
-            fit: 'inside',
-            withoutEnlargement: true
-        });
-
-        const { data: finalBuffer, info } = await sharpInstance
-            .png({ compressionLevel: 9 })
-            .toBuffer({ resolveWithObject: true });
-
-        finalInfo = info;
-        return { buffer: finalBuffer, contentType: outputContentType, finalInfo };
+    // Double-check dimensions match target after resize contain
+    if (info.width !== targetWidth || info.height !== targetHeight) {
+        context.log.warn(`Dimension mismatch after sharp processing: Expected ${targetWidth}x${targetHeight}, Got ${info.width}x${info.height}. BMP header will use target dimensions.`);
+        // If this happens often, might need composite step instead of relying on resize alone
     }
+    if (info.channels !== 1) {
+        context.log.warn(`Expected 1 channel after grayscale/threshold, but got ${info.channels}.`)
+    }
+    context.log(`Raw data ready: ${info.width}x${info.height}, channels: ${info.channels}`);
+
+    // Step 2: Prepare BMP Structure Calculation
+    const bitsPerPixel = 1;
+    const bytesPerPixel = info.channels; // Data from sharp is 1 byte per pixel (0 or 255)
+    const rowSizeUnpadded = Math.ceil((targetWidth * bitsPerPixel) / 8);
+    const rowSizePadded = Math.ceil(rowSizeUnpadded / 4) * 4; // Rows padded to 4-byte boundary
+    const pixelDataSize = rowSizePadded * targetHeight;
+    const paletteSize = 8; // 2 colors * 4 bytes/color (BGRA)
+    const fileHeaderSize = 14;
+    const infoHeaderSize = 40; // BITMAPINFOHEADER
+    const pixelDataOffset = fileHeaderSize + infoHeaderSize + paletteSize;
+    const fileSize = pixelDataOffset + pixelDataSize;
+
+    // Step 3: Create Buffer and Write Headers/Palette
+    const bmpBuffer = Buffer.alloc(fileSize);
+
+    // File Header
+    bmpBuffer.write('BM', 0); // Signature
+    bmpBuffer.writeUInt32LE(fileSize, 2);
+    bmpBuffer.writeUInt32LE(0, 6); // Reserved
+    bmpBuffer.writeUInt32LE(pixelDataOffset, 10);
+
+    // Info Header (BITMAPINFOHEADER)
+    bmpBuffer.writeUInt32LE(infoHeaderSize, 14);
+    bmpBuffer.writeInt32LE(targetWidth, 18);
+    bmpBuffer.writeInt32LE(targetHeight, 22); // Positive for bottom-up rows
+    bmpBuffer.writeUInt16LE(1, 26); // Planes
+    bmpBuffer.writeUInt16LE(bitsPerPixel, 28); // 1 bpp
+    bmpBuffer.writeUInt32LE(0, 30); // Compression (BI_RGB)
+    bmpBuffer.writeUInt32LE(pixelDataSize, 34);
+    const dpi = 203;
+    const pixelsPerMeter = Math.round(dpi / 0.0254);
+    bmpBuffer.writeInt32LE(pixelsPerMeter, 38); // X Pixels/Meter
+    bmpBuffer.writeInt32LE(pixelsPerMeter, 42); // Y Pixels/Meter
+    bmpBuffer.writeUInt32LE(2, 46); // Colors used (2 for 1-bit)
+    bmpBuffer.writeUInt32LE(0, 50); // Important colors (0 = all)
+
+    // Color Palette (BGRA order)
+    // Color 0: Black (index 0 in pixel data)
+    bmpBuffer.writeUInt32LE(0x00000000, fileHeaderSize + infoHeaderSize); // B=0, G=0, R=0, A=0
+    // Color 1: White (index 1 in pixel data)
+    bmpBuffer.writeUInt32LE(0x00FFFFFF, fileHeaderSize + infoHeaderSize + 4); // B=255, G=255, R=255, A=0
+
+    context.log(`BMP headers written. Pixel data offset: ${pixelDataOffset}, Pixel data size: ${pixelDataSize}`);
+
+    // Step 4: Pack Pixel Data (Bottom-up)
+    let bmpBufferWriteIndex = pixelDataOffset;
+    for (let y = targetHeight - 1; y >= 0; y--) { // Iterate rows bottom-up for BMP buffer
+        let currentByte = 0;
+        let bitPosition = 0;
+        let bytesWrittenInRow = 0;
+
+        for (let x = 0; x < targetWidth; x++) {
+            // Read from rawData (which is top-down)
+            const rawDataIndex = y * targetWidth + x; // Index in the 1-channel raw buffer
+            const pixelValue = rawData[rawDataIndex]; // 0 or 255
+            const bit = pixelValue < 128 ? 0 : 1; // Map: Black=0, White=1
+
+            // Pack bits into byte (MSB first)
+            currentByte |= (bit << (7 - bitPosition));
+            bitPosition++;
+
+            if (bitPosition === 8) {
+                bmpBuffer[bmpBufferWriteIndex++] = currentByte;
+                currentByte = 0;
+                bitPosition = 0;
+                bytesWrittenInRow++;
+            }
+        }
+        // Write partial byte at end of row
+        if (bitPosition > 0) {
+            bmpBuffer[bmpBufferWriteIndex++] = currentByte;
+            bytesWrittenInRow++;
+        }
+        // Add padding
+        while (bytesWrittenInRow < rowSizePadded) {
+            bmpBuffer[bmpBufferWriteIndex++] = 0x00;
+            bytesWrittenInRow++;
+        }
+    }
+    context.log(`BMP pixel data packed. Bytes written check: ${bmpBufferWriteIndex}`);
+    if (bmpBufferWriteIndex !== fileSize) {
+        context.log.warn(`Potential BMP buffer size mismatch: Written ${bmpBufferWriteIndex}, Expected ${fileSize}`);
+    }
+
+    return bmpBuffer;
 }
 
 
+// --- Standard PNG Creation Helper ---
+async function createPng(inputBuffer, targetWidth, targetHeight, context) {
+    context.log(`Applying PNG processing chain for ${targetWidth}x${targetHeight}`);
+    let sharpInstance = sharp(inputBuffer);
+
+    // Resize PNGs using fit: 'inside' to preserve aspect ratio without padding
+    sharpInstance = sharpInstance.resize(targetWidth, targetHeight, {
+        fit: 'inside',
+        withoutEnlargement: true
+    });
+
+    // Get final buffer and info
+    const { data: finalBuffer, info } = await sharpInstance
+        .png({ compressionLevel: 9 })
+        .toBuffer({ resolveWithObject: true });
+
+    return { buffer: finalBuffer, contentType: 'image/png', finalInfo: info };
+}
+
+
+// --- getFormatDimensions Helper Function ---
 function getFormatDimensions(format) {
     switch (format) {
         case 'Logo.png': return { width: 300, height: 300 };
