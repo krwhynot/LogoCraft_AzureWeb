@@ -3,35 +3,40 @@
 let BASE_URL;
 
 // Check Vite's built-in flag for production mode
-if (import.meta.env.PROD) { 
-  // Use the deployed Azure Function URL
-  BASE_URL = 'https://logocraftfunctions.azurewebsites.net/api'; 
-  // IMPORTANT: Consider function keys/codes if needed
+if (import.meta.env.PROD) {
+  BASE_URL = 'https://logocraftfunctions.azurewebsites.net/api';
 } else {
-  // Use the local Function URL for development (import.meta.env.DEV would be true here)
   BASE_URL = 'http://localhost:7071/api';
 }
 
-export const getBlobSasToken = async () => {
+// MODIFIED: Accept an optional containerName parameter
+export const getBlobSasToken = async (containerName = 'input-images') => { // Default to input-images
   try {
-    const response = await fetch(`${BASE_URL}/GetSasToken`);
+    // Append container name to the query string if provided
+    const url = `${BASE_URL}/GetSasToken?container=${encodeURIComponent(containerName)}`;
+    const response = await fetch(url); // Pass the container name
     if (!response.ok) {
-      throw new Error(`Failed to get SAS token: ${response.statusText}`);
+      // Try to get more details from the response body if possible
+      let errorDetails = response.statusText;
+      try {
+          const errorBody = await response.json();
+          errorDetails = errorBody.details || errorBody.error || errorDetails;
+      } catch (e) {/* Ignore if body isn't json */}
+      throw new Error(`Failed to get SAS token for ${containerName}: ${errorDetails}`);
     }
     return await response.json();
   } catch (error) {
-    console.error('Error getting SAS token:', error);
+    console.error(`Error getting SAS token for ${containerName}:`, error);
     throw error;
   }
 };
 
 export const uploadFileToBlob = async (file, filename) => {
   try {
-    // Get a SAS token for uploading
-    const { sasToken, containerUrl } = await getBlobSasToken();
+    // Get a SAS token for uploading (defaults to input-images)
+    const { sasToken, containerUrl } = await getBlobSasToken(); // No container specified, uses default 'input-images'
     const blobUrl = `${containerUrl}/${filename}${sasToken}`;
-    
-    // Upload the file to blob storage
+
     const response = await fetch(blobUrl, {
       method: 'PUT',
       headers: {
@@ -40,13 +45,18 @@ export const uploadFileToBlob = async (file, filename) => {
       },
       body: file
     });
-    
+
     if (!response.ok) {
-      throw new Error(`Failed to upload blob: ${response.statusText}`);
+       // Try to get more details from the response body if possible
+       let errorDetails = response.statusText;
+       try {
+           const errorBody = await response.text(); // Get text response
+           errorDetails = errorBody || errorDetails;
+       } catch (e) {/* Ignore */}
+      throw new Error(`Failed to upload blob: ${errorDetails}`);
     }
-    
-    // Return the URL without SAS token
-    return blobUrl.split('?')[0]; 
+
+    return blobUrl.split('?')[0];
   } catch (error) {
     console.error('Error uploading file to blob storage:', error);
     throw error;
@@ -55,22 +65,22 @@ export const uploadFileToBlob = async (file, filename) => {
 
 export const processImage = async (blobUrl, formatOptions) => {
   try {
-    // Call the Azure Function to process the image
     const response = await fetch(`${BASE_URL}/ProcessImage`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        sourceUrl: blobUrl,
-        formats: formatOptions
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceUrl: blobUrl, formats: formatOptions })
     });
-    
+
     if (!response.ok) {
-      throw new Error(`Failed to process image: ${response.statusText}`);
+       // Try to get more details from the response body if possible
+       let errorDetails = response.statusText;
+       try {
+           const errorBody = await response.json();
+           errorDetails = errorBody.details || errorBody.error || errorDetails;
+       } catch (e) {/* Ignore if body isn't json */}
+      throw new Error(`Failed to process image: ${errorDetails}`);
     }
-    
+
     return await response.json();
   } catch (error) {
     console.error('Error processing image:', error);
@@ -78,20 +88,34 @@ export const processImage = async (blobUrl, formatOptions) => {
   }
 };
 
+// MODIFIED: Pass 'output-images' when getting token for download
 export const getProcessedImage = async (blobUrl) => {
   try {
-    // Get a SAS token to download the image
-    const { sasToken } = await getBlobSasToken();
-    const downloadUrl = `${blobUrl}${sasToken}`;
-    
+    // Get a SAS token specifically for the output container
+    const outputContainerName = 'output-images'; // Define the correct container
+    const { sasToken } = await getBlobSasToken(outputContainerName); // Pass the container name
+    const downloadUrl = `${blobUrl}${sasToken}`; // Append the correct token
+
     const response = await fetch(downloadUrl);
     if (!response.ok) {
-      throw new Error(`Failed to download image: ${response.statusText}`);
+      // Try to get more details from the response body if possible
+       let errorDetails = response.statusText;
+       try {
+           // Blob storage errors are often XML or text
+           const errorBody = await response.text(); 
+           // A common authentication error text check:
+           if (errorBody.includes('AuthenticationFailed')) {
+               errorDetails = 'Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.';
+           } else {
+               errorDetails = errorBody || errorDetails;
+           }
+       } catch (e) {/* Ignore */}
+      throw new Error(`Failed to download image: ${errorDetails}`);
     }
-    
+
     return await response.blob();
   } catch (error) {
     console.error('Error downloading processed image:', error);
-    throw error;
+    throw error; // Re-throw the potentially more detailed error
   }
 };
