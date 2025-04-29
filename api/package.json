@@ -4,11 +4,15 @@
   "description": "",
   "scripts": {
     "start": "func start",
-    "test": "echo \"No tests yet...\""
+    "test": "echo \"No tests yet...\"",
+    "postinstall": "npm rebuild sharp --platform=linux --arch=x64"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.27.0",
     "node-fetch": "^2.7.0",
     "sharp": "^0.34.1"
+  },
+  "optionalDependencies": {
+    "@img/sharp-linux-x64": "^0.34.1"
   }
 }
