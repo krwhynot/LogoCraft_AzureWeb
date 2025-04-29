@@ -1,13 +1,6 @@
 // frontend/src/services/BlobService.js
 
-let BASE_URL;
-
-// Check Vite's built-in flag for production mode
-if (import.meta.env.PROD) {
-  BASE_URL = 'https://logocraftfunctions.azurewebsites.net/api';
-} else {
-  BASE_URL = 'http://localhost:7071/api';
-}
+const BASE_URL = '/api';
 
 // MODIFIED: Accept an optional containerName parameter
 export const getBlobSasToken = async (containerName = 'input-images') => { // Default to input-images
