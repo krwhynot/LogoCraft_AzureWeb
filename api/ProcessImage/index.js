@@ -10,11 +10,19 @@ module.exports = async function (context, req) {
         }
 
         const { sourceUrl, formats } = req.body;
-        const outputContainer = 'output-images';
+        if (typeof sourceUrl !== 'string' || !sourceUrl.startsWith('https://')) {
+            throw new Error('Invalid source URL format');
+        }
 
+        const connectionString = process.env.AzureWebJobsStorage;
+        if (!connectionString) {
+            throw new Error('AzureWebJobsStorage environment variable is not set.');
+        }
+
+        const outputContainer = 'output-images';
         context.log('Processing image request', { sourceUrl, formatCount: Object.keys(formats).length });
 
-        const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.AzureWebJobsStorage);
+        const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
         const containerClient = blobServiceClient.getContainerClient(outputContainer);
 
         context.log('Downloading source image:', sourceUrl);

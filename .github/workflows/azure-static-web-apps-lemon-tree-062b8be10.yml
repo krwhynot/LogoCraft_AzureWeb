@@ -15,7 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     env:
-      STORAGE_ACCOUNT_KEY: ${{ secrets.STORAGE_ACCOUNT_KEY }}  
+      STORAGE_ACCOUNT_KEY: ${{ secrets.STORAGE_ACCOUNT_KEY }}
+      AzureWebJobsStorage: ${{ secrets.AZURE_WEBJOBS_STORAGE }}  
     steps:
       - uses: actions/checkout@v3
         with:
