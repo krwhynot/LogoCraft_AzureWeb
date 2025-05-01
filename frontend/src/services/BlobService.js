@@ -55,11 +55,11 @@ export const getProcessedImage = async (url) => {
  * @param {object} formats
  * @returns {Promise<object>}
  */
-export const processImage = async (blobUrl, formats) => {
+export const processImage = async (sourceUrl, formats) => {
   const response = await fetch('/api/ProcessImage', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ blobUrl, formats })
+    body: JSON.stringify({ sourceUrl, formats }) // ✅ note 'sourceUrl'
   });
 
   if (!response.ok) {
@@ -69,3 +69,4 @@ export const processImage = async (blobUrl, formats) => {
 
   return await response.json();
 };
+

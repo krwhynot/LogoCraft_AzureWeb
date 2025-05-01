@@ -91,64 +91,99 @@ function App() {
   const hasSelectedFormats = Object.values(selectedFormats).some(value => value === true);
 
   const handleProcessAndDownload = async () => {
-    if (!currentFile) { setError('Please select an image first'); setStatusMessage('Please select an image first'); return; }
+    if (!currentFile) {
+      setError('Please select an image first');
+      setStatusMessage('Please select an image first');
+      return;
+    }
+  
     const formatKeys = Object.keys(selectedFormats).filter(key => selectedFormats[key]);
-    if (formatKeys.length === 0) { setError('Please select at least one output format'); setStatusMessage('Please select at least one output format'); return; }
-
-    setIsProcessing(true); setProgress(0); setStatusMessage('Starting process...'); setError(null);
-    setProcessedImages([]); setActiveResult(null); let didDownloadStart = false; // Keep track if download begins
-
+    if (formatKeys.length === 0) {
+      setError('Please select at least one output format');
+      setStatusMessage('Please select at least one output format');
+      return;
+    }
+  
+    setIsProcessing(true);
+    setProgress(0);
+    setStatusMessage('Starting process...');
+    setError(null);
+    setProcessedImages([]);
+    setActiveResult(null);
+    let didDownloadStart = false;
+  
     try {
-      const timestamp = new Date().getTime(); const filename = `${timestamp}_${currentFile.name}`;
+      const timestamp = new Date().getTime();
+      const filename = `${timestamp}_${currentFile.name}`;
+  
       setStatusMessage('Uploading image...');
       const blobUrl = await uploadFileToBlob(currentFile, filename);
-      setProgress(10); setStatusMessage('Image uploaded, starting processing...');
-
-      const formatsToProcess = {}; formatKeys.forEach(key => { formatsToProcess[key] = true; });
+  
+      console.log("Blob URL after upload:", blobUrl);
+      setProgress(10);
+      setStatusMessage('Image uploaded, starting processing...');
+  
+      const formatsToProcess = {};
+      formatKeys.forEach(key => {
+        formatsToProcess[key] = true;
+      });
+  
+      console.log("Calling processImage with:", {
+        sourceUrl: blobUrl,
+        formats: formatsToProcess
+      });
+  
+      // Update here: renamed `blobUrl` to `sourceUrl` for API
       const result = await processImage(blobUrl, formatsToProcess);
-      setProgress(50); setStatusMessage('Processing finished, preparing results...');
-
+      setProgress(50);
+      setStatusMessage('Processing finished, preparing results...');
+  
       const downloadedImages = result.processedImages || [];
       setProcessedImages(downloadedImages);
       setActiveStep(3);
-
+  
       if (downloadedImages.length > 0) {
-          setStatusMessage("Preparing zip file..."); setProgress(60); const zip = new JSZip(); let fetchedCount = 0;
-          for (const image of downloadedImages) {
-            fetchedCount++; setStatusMessage(`Workspaceing ${image.name} (${fetchedCount}/${downloadedImages.length})...`);
-            const blobData = await getProcessedImage(image.url);
-            zip.file(image.name, blobData, { binary: true });
-            setProgress(60 + (30 * fetchedCount / downloadedImages.length));
-          }
-          setStatusMessage("Generating zip file..."); setProgress(95);
-          const zipBlob = await zip.generateAsync({ type: 'blob', compression: "DEFLATE", compressionOptions: { level: 6 } });
-          setStatusMessage("Starting download...");
-          saveAs(zipBlob, 'logocraft_exports.zip');
-          setStatusMessage("Process complete, download initiated."); // Message before reset
-          didDownloadStart = true; // Mark download as started
+        setStatusMessage("Preparing zip file...");
+        setProgress(60);
+        const zip = new JSZip();
+        let fetchedCount = 0;
+  
+        for (const image of downloadedImages) {
+          fetchedCount++;
+          setStatusMessage(`Processing ${image.name} (${fetchedCount}/${downloadedImages.length})...`);
+          const blobData = await getProcessedImage(image.url);
+          zip.file(image.name, blobData, { binary: true });
+          setProgress(60 + (30 * fetchedCount / downloadedImages.length));
+        }
+  
+        setStatusMessage("Generating zip file...");
+        setProgress(95);
+        const zipBlob = await zip.generateAsync({ type: 'blob', compression: "DEFLATE", compressionOptions: { level: 6 } });
+        setStatusMessage("Starting download...");
+        saveAs(zipBlob, 'logocraft_exports.zip');
+        setStatusMessage("Process complete, download initiated.");
+        didDownloadStart = true;
       } else {
-          setStatusMessage("Processing complete, but no images were generated.");
-          setError("No images were generated based on selected formats.");
-          setActiveStep(2); // Stay in configure step if no results
+        setStatusMessage("Processing complete, but no images were generated.");
+        setError("No images were generated based on selected formats.");
+        setActiveStep(2);
       }
+  
     } catch (err) {
       console.error('Processing or Zipping error:', err);
       const errorMsg = err.message || 'An error occurred during the process';
       setError(`Operation failed: ${errorMsg}`);
       setStatusMessage(`Error: ${errorMsg}`);
-      setActiveStep(2); // Revert to configure step on error
+      setActiveStep(2);
     } finally {
-        // **MODIFIED SECTION START**
-        setIsProcessing(false);
-        setProgress(100); // Ensure progress bar shows complete
-        // Always reset after a delay, regardless of success or failure
-        setTimeout(() => {
-          handleReset();
-          // Status message is set inside handleReset now
-        }, 3000); // Use a 3-second delay to allow reading the final status message
-        // **MODIFIED SECTION END**
+      setIsProcessing(false);
+      setProgress(100);
+      setTimeout(() => {
+        handleReset();
+      }, 3000);
     }
   };
+  
 
   // getFormatDimensions function remains the same...
   const getFormatDimensions = (format) => {
