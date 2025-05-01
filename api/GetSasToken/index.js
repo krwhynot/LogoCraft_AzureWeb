@@ -7,7 +7,7 @@ const {
 module.exports = async function (context, req) {
     try {
         const accountName = 'logocraftstorage2200';
-        const accountKey = process.env.STORAGE_ACCOUNT_KEY;
+        const accountKey = process.env['STORAGE_ACCOUNT_KEY'];
 
         const containerName = req.query.container || 'input-images';
         const blobName = req.query.filename;  // Required
