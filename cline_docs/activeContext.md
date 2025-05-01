@@ -1,10 +1,21 @@
 # Active Context
 
 ## What you're working on now
-Fixed the Azure Function App deployment issue where "No HTTP triggers found" error was occurring. The issue was related to the folder structure of the Azure Functions project, which had functions nested in `api/src/functions/` instead of being directly under the project root (`api/`).
+Architecture review and documentation of the LogoCraftWeb project. Analyzing the codebase to understand the system architecture, component structure, and data flow patterns.
 
 ## Recent changes
-1. Restructured the Azure Functions project:
+1. Updated systemPatterns.md with comprehensive architectural documentation:
+   - Expanded component structure details with specific responsibilities
+   - Added key state management information
+   - Documented API communication patterns
+   - Added detailed image processing information
+   - Expanded architecture patterns with additional patterns identified:
+     - Batch Processing
+     - Progressive Enhancement
+     - Client-Side Routing
+     - Proxy Configuration
+
+2. Previous Azure Functions restructuring (completed earlier):
    - Moved function folders from `api/src/functions/` to directly under `api/`
    - Created proper function folders at the root level:
      - `api/GetSasToken/`
@@ -16,7 +27,7 @@ Fixed the Azure Function App deployment issue where "No HTTP triggers found" err
    - Verified `host.json` has the correct version (2.0)
    - Confirmed `package.json` doesn't have isolated worker dependencies
 
-2. Previous UI work (completed earlier):
+3. Previous UI work (completed earlier):
    - Modified the layout structure in App.jsx:
      - Reorganized the panels from a vertical stack to a more horizontal arrangement
      - Created a two-row layout with panels distributed more evenly
@@ -29,18 +40,23 @@ Fixed the Azure Function App deployment issue where "No HTTP triggers found" err
      - Updated responsive breakpoints for different screen sizes
 
 ## Next steps
-1. Deploy the fixed Azure Functions to Azure:
+1. Validate architectural understanding and plan any necessary refinements:
+   - Review the updated systemPatterns.md for accuracy and completeness
+   - Identify any architectural improvements that could be made
+   - Consider documenting any potential technical debt or areas for improvement
+
+2. Deploy the fixed Azure Functions to Azure:
    - Right-click on the project root (api folder)
    - Select "Deploy to Function App"
    - Choose subscription and Function App
    - Verify functions appear in Azure Portal
 
-2. Connect the frontend to the deployed Azure Functions:
+3. Connect the frontend to the deployed Azure Functions:
    - Update the BlobService.js to use the actual Azure Function endpoints
    - Test the image upload and processing functionality
    - Implement error handling for API calls
 
-3. Further backend development:
+4. Further backend development:
    - Implement additional error handling in the Azure Functions
    - Add logging for better troubleshooting
    - Consider adding authentication to the API endpoints
