@@ -1,114 +1,71 @@
-// frontend/src/services/BlobService.js
+import axios from 'axios';
 
-const BASE_URL = '/api';
-
-// MODIFIED: Accept an optional containerName parameter
-export const getBlobSasToken = async (containerName = 'input-images') => { // Default to input-images
-  try {
-    // Append container name to the query string if provided
-    const url = `${BASE_URL}/GetSasToken?container=${encodeURIComponent(containerName)}`;
-    const response = await fetch(url); // Pass the container name
-    if (!response.ok) {
-      // Try to get more details from the response body if possible
-      let errorDetails = response.statusText;
-      try {
-          const errorBody = await response.json();
-          errorDetails = errorBody.details || errorBody.error || errorDetails;
-      } catch (e) {/* Ignore if body isn't json */}
-      throw new Error(`Failed to get SAS token for ${containerName}: ${errorDetails}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error(`Error getting SAS token for ${containerName}:`, error);
-    throw error;
+/**
+ * Get SAS URL for uploading a specific file
+ * @param {string} filename
+ * @returns {Promise<string>} Signed URL to upload blob
+ */
+const getSasUrl = async (filename) => {
+  const response = await fetch(`/api/GetSasToken?container=input-images&filename=${encodeURIComponent(filename)}`);
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Failed to get SAS token for input-images: ${text}`);
   }
+  const data = await response.json();
+  return data.blobUrlWithSas;
 };
 
+/**
+ * Upload file to Azure Blob Storage using SAS URL
+ * @param {File} file - File object
+ * @param {string} filename - Name for the blob
+ * @returns {Promise<string>} - URL to uploaded blob
+ */
 export const uploadFileToBlob = async (file, filename) => {
-  try {
-    // Get a SAS token for uploading (defaults to input-images)
-    const { sasToken, containerUrl } = await getBlobSasToken(); // No container specified, uses default 'input-images'
-    const blobUrl = `${containerUrl}/${filename}${sasToken}`;
+  const sasUrl = await getSasUrl(filename);
 
-    const response = await fetch(blobUrl, {
-      method: 'PUT',
-      headers: {
-        'x-ms-blob-type': 'BlockBlob',
-        'Content-Type': file.type
-      },
-      body: file
-    });
-
-    if (!response.ok) {
-       // Try to get more details from the response body if possible
-       let errorDetails = response.statusText;
-       try {
-           const errorBody = await response.text(); // Get text response
-           errorDetails = errorBody || errorDetails;
-       } catch (e) {/* Ignore */}
-      throw new Error(`Failed to upload blob: ${errorDetails}`);
+  await axios.put(sasUrl, file, {
+    headers: {
+      'x-ms-blob-type': 'BlockBlob',
+      'Content-Type': file.type
     }
+  });
 
-    return blobUrl.split('?')[0];
-  } catch (error) {
-    console.error('Error uploading file to blob storage:', error);
-    throw error;
-  }
+  // Return the blob URL without the SAS token if needed
+  const [blobUrl] = sasUrl.split('?');
+  return blobUrl;
 };
 
-export const processImage = async (blobUrl, formatOptions) => {
-  try {
-    const response = await fetch(`${BASE_URL}/ProcessImage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sourceUrl: blobUrl, formats: formatOptions })
-    });
-
-    if (!response.ok) {
-       // Try to get more details from the response body if possible
-       let errorDetails = response.statusText;
-       try {
-           const errorBody = await response.json();
-           errorDetails = errorBody.details || errorBody.error || errorDetails;
-       } catch (e) {/* Ignore if body isn't json */}
-      throw new Error(`Failed to process image: ${errorDetails}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error processing image:', error);
-    throw error;
+/**
+ * Fetch processed image blob from URL
+ * @param {string} url
+ * @returns {Promise<Blob>}
+ */
+export const getProcessedImage = async (url) => {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image from ${url}`);
   }
+  return await response.blob();
 };
 
-// MODIFIED: Pass 'output-images' when getting token for download
-export const getProcessedImage = async (blobUrl) => {
-  try {
-    // Get a SAS token specifically for the output container
-    const outputContainerName = 'output-images'; // Define the correct container
-    const { sasToken } = await getBlobSasToken(outputContainerName); // Pass the container name
-    const downloadUrl = `${blobUrl}${sasToken}`; // Append the correct token
+/**
+ * Trigger backend image processing
+ * @param {string} blobUrl
+ * @param {object} formats
+ * @returns {Promise<object>}
+ */
+export const processImage = async (blobUrl, formats) => {
+  const response = await fetch('/api/ProcessImage', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ blobUrl, formats })
+  });
 
-    const response = await fetch(downloadUrl);
-    if (!response.ok) {
-      // Try to get more details from the response body if possible
-       let errorDetails = response.statusText;
-       try {
-           // Blob storage errors are often XML or text
-           const errorBody = await response.text(); 
-           // A common authentication error text check:
-           if (errorBody.includes('AuthenticationFailed')) {
-               errorDetails = 'Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.';
-           } else {
-               errorDetails = errorBody || errorDetails;
-           }
-       } catch (e) {/* Ignore */}
-      throw new Error(`Failed to download image: ${errorDetails}`);
-    }
-
-    return await response.blob();
-  } catch (error) {
-    console.error('Error downloading processed image:', error);
-    throw error; // Re-throw the potentially more detailed error
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Processing failed: ${text}`);
   }
+
+  return await response.json();
 };
