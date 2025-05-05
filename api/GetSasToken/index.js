@@ -1,46 +1,50 @@
 const {
-    StorageSharedKeyCredential,
-    generateBlobSASQueryParameters,
+    BlobServiceClient,
     BlobSASPermissions
 } = require('@azure/storage-blob');
 
 module.exports = async function (context, req) {
     try {
-        const accountName = 'logocraftstorage2200';
-        const accountKey = process.env['STORAGE_ACCOUNT_KEY'];
-
+        // Get connection string from environment variables
+        const connectionString = process.env.AzureWebJobsStorage;
+        if (!connectionString) {
+            throw new Error("Missing AzureWebJobsStorage connection string");
+        }
+        
+        // Get container name from query or use default
         const containerName = req.query.container || 'input-images';
-        const blobName = req.query.filename;  // Required
-
-        if (!accountKey || !blobName) {
-            throw new Error("Missing STORAGE_ACCOUNT_KEY or 'filename' query param.");
+        // The filename is required
+        const blobName = req.query.filename;
+        
+        if (!blobName) {
+            throw new Error("Missing required 'filename' query parameter.");
         }
 
-        const sharedKeyCredential = new StorageSharedKeyCredential(accountName, accountKey);
+        context.log("Generating SAS token for", containerName, blobName);
 
-        const permissions = new BlobSASPermissions();
-        permissions.read = true;
-        permissions.write = true;
-        permissions.create = true;
-
-        const startsOn = new Date();
-        const expiresOn = new Date(startsOn);
-        expiresOn.setHours(startsOn.getHours() + 1);
-
-        const sasToken = generateBlobSASQueryParameters({
-            containerName,
-            blobName,
-            permissions,
-            startsOn,
-            expiresOn
-        }, sharedKeyCredential).toString();
-
-        const blobUrlWithSas = `https://${accountName}.blob.core.windows.net/${containerName}/${blobName}?${sasToken}`;
-
+        // Create the BlobServiceClient using the connection string
+        const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
+        const containerClient = blobServiceClient.getContainerClient(containerName);
+        
+        // Generate SAS token with appropriate permissions
+        const blobClient = containerClient.getBlobClient(blobName);
+        
+        // Create a SAS token that expires in 1 hour
+        const expiresOn = new Date();
+        expiresOn.setHours(expiresOn.getHours() + 1);
+        
+        // Generate SAS URL with permissions
+        const sasUrl = await blobClient.generateSasUrl({
+            permissions: BlobSASPermissions.parse("racw"),  // read, add, create, write
+            expiresOn: expiresOn
+        });
+        
+        context.log("SAS URL generated successfully");
+        
         context.res = {
             status: 200,
             body: {
-                blobUrlWithSas
+                blobUrlWithSas: sasUrl
             }
         };
     } catch (error) {

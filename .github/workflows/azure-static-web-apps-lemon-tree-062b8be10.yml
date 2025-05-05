@@ -14,9 +14,6 @@ jobs:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
-    env:
-      STORAGE_ACCOUNT_KEY: ${{ secrets.STORAGE_ACCOUNT_KEY }}
-      AzureWebJobsStorage: ${{ secrets.AZURE_WEBJOBS_STORAGE }}  
     steps:
       - uses: actions/checkout@v3
         with:
@@ -32,7 +29,9 @@ jobs:
           app_location: "./frontend"
           api_location: "./api"
           output_location: "dist"
-
+        env:
+          AZURE_WEBJOBS_STORAGE: ${{ secrets.AZURE_WEBJOBS_STORAGE }}
+          STORAGE_ACCOUNT_KEY: ${{ secrets.STORAGE_ACCOUNT_KEY }}
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
@@ -45,4 +44,3 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_LEMON_TREE_062B8BE10 }}
           action: "close"
-          app_location: "./frontend"
