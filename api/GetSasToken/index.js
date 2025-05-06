@@ -8,9 +8,9 @@ const fetch = require('node-fetch'); // This import seems leftover from ProcessI
 module.exports = async function (context, req) {
     // --- START VERBOSE DEBUG LOGGING ---
     context.log("--- GetSasToken Function Execution Start ---");
-    // Force isLocal to true for local development since AZURE_FUNCTIONS_ENVIRONMENT might not be set correctly
-    const isLocal = true;
-    context.log(`DEBUG: Forcing isLocal = ${isLocal} for local development`);
+    // Check if running locally or in production
+    const isLocal = process.env.AZURE_FUNCTIONS_ENVIRONMENT === 'Development';
+    context.log(`Running in ${isLocal ? 'local development' : 'production'} mode`);
     // --- END VERBOSE DEBUG LOGGING ---
 
     try {

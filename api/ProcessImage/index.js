@@ -26,9 +26,9 @@ module.exports = async function (context, req) {
 
         // Check if we're running locally with a storage account key
         const storageAccountKey = process.env.STORAGE_ACCOUNT_KEY;
-        // Force isLocal to true for local development since AZURE_FUNCTIONS_ENVIRONMENT might not be set correctly
-        const isLocal = true;
-        context.log(`DEBUG: Forcing isLocal = ${isLocal} for local development`);
+        // Check if running locally or in production
+        const isLocal = process.env.AZURE_FUNCTIONS_ENVIRONMENT === 'Development';
+        context.log(`Running in ${isLocal ? 'local development' : 'production'} mode`);
         const blobServiceUri = `https://${storageAccountName}.blob.core.windows.net`;
         let blobServiceClient;
         
