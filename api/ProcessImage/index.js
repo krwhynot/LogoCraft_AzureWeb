@@ -1,4 +1,5 @@
 const { BlobServiceClient } = require('@azure/storage-blob');
+const { DefaultAzureCredential } = require("@azure/identity");
 const sharp = require('sharp');
 const fetch = require('node-fetch');
 
@@ -14,26 +15,101 @@ module.exports = async function (context, req) {
             throw new Error('Invalid source URL format');
         }
 
-        const connectionString = process.env.AzureWebJobsStorage;
-        if (!connectionString) {
-            throw new Error('AzureWebJobsStorage environment variable is not set.');
+        const storageAccountName = process.env.STORAGE_ACCOUNT_NAME;
+        if (!storageAccountName) {
+            throw new Error('STORAGE_ACCOUNT_NAME environment variable is not set.');
         }
 
-        const outputContainer = 'output-images';
+        const inputContainerName = 'input-images';
+        const outputContainerName = 'output-images';
         context.log('Processing image request', { sourceUrl, formatCount: Object.keys(formats).length });
 
-        const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
-        const containerClient = blobServiceClient.getContainerClient(outputContainer);
-
-        context.log('Downloading source image:', sourceUrl);
-        const response = await fetch(sourceUrl);
-        if (!response.ok) {
-            throw new Error(`Failed to download source image: ${response.statusText}`);
+        // Check if we're running locally with a storage account key
+        const storageAccountKey = process.env.STORAGE_ACCOUNT_KEY;
+        // Force isLocal to true for local development since AZURE_FUNCTIONS_ENVIRONMENT might not be set correctly
+        const isLocal = true;
+        context.log(`DEBUG: Forcing isLocal = ${isLocal} for local development`);
+        const blobServiceUri = `https://${storageAccountName}.blob.core.windows.net`;
+        let blobServiceClient;
+        
+        if (isLocal && storageAccountKey) {
+            context.log("INFO: Running locally with storage account key.");
+            try {
+                // For local development, use the storage account key
+                // This bypasses the need for Azure AD authentication and RBAC roles
+                const connectionString = `DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${storageAccountKey};EndpointSuffix=core.windows.net`;
+                blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
+                context.log("INFO: Using storage account key for authentication.");
+            } catch (error) {
+                context.log.error("Error creating BlobServiceClient with connection string:", error.message);
+                throw new Error(`Failed to create BlobServiceClient: ${error.message}`);
+            }
+        } else {
+            context.log("INFO: Using DefaultAzureCredential (Managed Identity or Azure CLI).");
+            // Use DefaultAzureCredential which works with Managed Identity
+            const credential = new DefaultAzureCredential();
+            blobServiceClient = new BlobServiceClient(blobServiceUri, credential);
         }
 
-        const arrayBuffer = await response.arrayBuffer();
-        const imageBuffer = Buffer.from(arrayBuffer);
-        context.log('Source image downloaded successfully');
+        // Get container clients
+        const outputContainerClient = blobServiceClient.getContainerClient(outputContainerName);
+        
+        // Ensure output container exists
+        const outputContainerExists = await outputContainerClient.exists();
+        if (!outputContainerExists) {
+            context.log(`Output container ${outputContainerName} does not exist. Creating it...`);
+            await outputContainerClient.create();
+            context.log(`Output container ${outputContainerName} created successfully.`);
+        }
+
+        // Parse the source URL to extract the blob name
+        // This handles URLs both with and without SAS tokens
+        let inputBlobName;
+        try {
+            const urlObj = new URL(sourceUrl);
+            const pathParts = urlObj.pathname.split('/');
+            // Last part of the path is the blob name
+            inputBlobName = pathParts[pathParts.length - 1];
+        } catch (error) {
+            throw new Error(`Failed to parse source URL: ${error.message}`);
+        }
+
+        // Download the source image - two options:
+        let imageBuffer;
+        
+        // Option 1: Try using managed identity first (if inputBlobName was extracted successfully)
+        if (inputBlobName) {
+            try {
+                context.log(`Attempting to download blob ${inputBlobName} using Managed Identity`);
+                const inputContainerClient = blobServiceClient.getContainerClient(inputContainerName);
+                const blockBlobClient = inputContainerClient.getBlockBlobClient(inputBlobName);
+                const downloadResponse = await blockBlobClient.download(0);
+                
+                // Convert stream to buffer
+                const chunks = [];
+                const readableStream = downloadResponse.readableStreamBody;
+                for await (const chunk of readableStream) {
+                    chunks.push(chunk);
+                }
+                imageBuffer = Buffer.concat(chunks);
+                context.log('Source image downloaded successfully using Managed Identity');
+            } catch (error) {
+                context.log.warn(`Failed to download using Managed Identity: ${error.message}. Falling back to sourceUrl.`);
+                // Fall back to Option 2
+            }
+        }
+        
+        // Option 2: Fall back to the provided sourceUrl (with SAS token) if Option 1 fails
+        if (!imageBuffer) {
+            context.log('Downloading source image using provided URL with SAS token:', sourceUrl);
+            const response = await fetch(sourceUrl);
+            if (!response.ok) {
+                throw new Error(`Failed to download source image: ${response.statusText}`);
+            }
+            const arrayBuffer = await response.arrayBuffer();
+            imageBuffer = Buffer.from(arrayBuffer);
+            context.log('Source image downloaded successfully using provided URL');
+        }
 
         const processedImages = [];
 
@@ -58,15 +134,18 @@ module.exports = async function (context, req) {
                 }
 
                 const uniqueBlobName = `${Date.now()}_${formatKey}`;
-                const blockBlobClient = containerClient.getBlockBlobClient(uniqueBlobName);
+                const blockBlobClient = outputContainerClient.getBlockBlobClient(uniqueBlobName);
 
                 context.log(`Uploading processed image: ${uniqueBlobName} as ${contentType}`);
                 await blockBlobClient.uploadData(processedBuffer, {
                     blobHTTPHeaders: { blobContentType: contentType }
                 });
 
+                // Return blob info without SAS token
                 processedImages.push({
                     name: formatKey,
+                    blobName: uniqueBlobName,
+                    containerName: outputContainerName,
                     url: blockBlobClient.url,
                     size: `${finalInfo.width}×${finalInfo.height}`,
                     dimensions: { width: finalInfo.width, height: finalInfo.height }

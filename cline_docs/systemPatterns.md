@@ -70,52 +70,64 @@ LogoCraftWeb is built as a React-based web application with a clear separation b
    - Configurable dimensions for different output formats
 
 ## Architecture patterns
-1. **Three-Step Workflow**: The application follows a clear three-step process:
+1. **Dual-Mode Authentication**: The application supports two authentication modes:
+   - **Production Mode**: Uses Azure Managed Identity for secure, key-free authentication to Azure Storage
+     - System-assigned Managed Identity for the Function App
+     - RBAC roles (Storage Blob Data Contributor & Storage Blob Delegator)
+     - DefaultAzureCredential for acquiring tokens
+     - User delegation keys for generating SAS tokens
+   - **Local Development Mode**: Uses Storage Account Key stored in local settings
+     - StorageSharedKeyCredential for generating SAS tokens
+     - Connection strings for creating BlobServiceClient
+     - Environment detection to determine the correct mode
+     - Fallback mechanisms for authentication
+
+2. **Three-Step Workflow**: The application follows a clear three-step process:
    - Upload: Select and upload an image
    - Configure: Select output formats and settings
    - Results: View and download processed images
 
-2. **Horizontal Layout**: The UI is structured with a balanced horizontal arrangement
+3. **Horizontal Layout**: The UI is structured with a balanced horizontal arrangement
    - Top row: Upload panel on the left, Export Options and Processing panels on the right
    - Bottom row: Preview/Results panel on the left, Format Info panel on the right
    - This layout makes more efficient use of screen space and reduces empty areas
 
-3. **Panel-Based UI**: The interface is organized into distinct panels, each with a header and body
+4. **Panel-Based UI**: The interface is organized into distinct panels, each with a header and body
    - Panels are visually separated and can be active or inactive based on the current step
    - This creates a clear visual hierarchy and guides the user through the workflow
 
-4. **Responsive Design**: The layout adapts to different screen sizes
+5. **Responsive Design**: The layout adapts to different screen sizes
    - On larger screens, the two-column layout is maintained
    - On smaller screens, the layout shifts to a more vertical orientation
    - CSS media queries handle different viewport sizes
 
-5. **Microservices Pattern**: Backend functionality is divided into focused, single-purpose functions
+6. **Microservices Pattern**: Backend functionality is divided into focused, single-purpose functions
    - GetSasToken: Handles authentication and authorization for blob storage
    - ProcessImage: Focuses on image transformation and processing
    - Each function can be deployed, scaled, and maintained independently
 
-6. **API-First Design**: Clear separation between frontend and backend
+7. **API-First Design**: Clear separation between frontend and backend
    - RESTful API endpoints for all backend operations
    - Frontend communicates with backend exclusively through these APIs
    - Enables independent development and testing of frontend and backend components
 
-7. **Batch Processing**: Supports processing multiple output formats in a single operation
+8. **Batch Processing**: Supports processing multiple output formats in a single operation
    - User selects desired formats from a comprehensive list
    - Backend processes all selected formats in parallel
    - Results are bundled into a zip file for convenient download
 
-8. **Progressive Enhancement**: The UI provides feedback at each step
+9. **Progressive Enhancement**: The UI provides feedback at each step
    - Visual indicators show the current step in the process
    - Progress bars indicate processing status
    - Status messages provide context about current operations
    - Error handling with user-friendly messages
 
-9. **Client-Side Routing**: The application maintains state without page reloads
-   - Single-page application (SPA) architecture
-   - State-based UI updates without navigation
-   - Reset functionality to start the process over
+10. **Client-Side Routing**: The application maintains state without page reloads
+    - Single-page application (SPA) architecture
+    - State-based UI updates without navigation
+    - Reset functionality to start the process over
 
-10. **Proxy Configuration**: Development server proxies API requests
+11. **Proxy Configuration**: Development server proxies API requests
     - Vite development server configured to proxy /api requests
     - Enables local development with remote API endpoints
     - Simplifies CORS handling during development

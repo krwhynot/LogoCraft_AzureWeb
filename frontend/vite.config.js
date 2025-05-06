@@ -1,3 +1,4 @@
+// frontend/vite.config.js
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -7,9 +8,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://logocraftfunctions.azurewebsites.net', 
+        target: 'http://localhost:7071', // Changed from deployed URL to local host
         changeOrigin: true,
-        secure: true,
+        secure: false, // Set to false for local http
       }
     }
   }

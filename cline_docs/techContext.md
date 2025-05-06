@@ -28,7 +28,9 @@
    - Node.js with JavaScript
    - Sharp library for image processing
    - Azure Storage SDK (@azure/storage-blob)
+   - Azure Identity SDK (@azure/identity)
    - SAS token authentication for blob storage
+   - Azure Managed Identity for secure, key-free authentication
 
 ## Development setup
 1. **Project Structure**:
@@ -63,6 +65,9 @@
    - Azure Functions local runtime for backend testing
    - VS Code Azure Functions extension for deployment
    - Proxy configuration in Vite to route API requests during development
+   - Dual-mode authentication:
+     - Local: Storage Account Key in local.settings.json
+     - Production: Azure Managed Identity
 
 4. **Deployment**:
    - Frontend: Static site hosting (not yet configured)
@@ -86,7 +91,10 @@
    - Each function folder must contain function.json and index.js
    - host.json must be in the project root with version 2.0
    - Proper HTTP trigger bindings required for web API endpoints
-   - Anonymous authentication used for simplicity
+   - Anonymous authentication used for API endpoints
+   - Managed Identity for secure Azure Storage authentication
+   - System-assigned Managed Identity for Function App
+   - RBAC roles (Storage Blob Data Contributor, Storage Blob Delegator)
 
 4. **Limitations**:
    - Maximum image size: 20MB (as indicated in the UI)
