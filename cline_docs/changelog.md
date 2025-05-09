@@ -1,3 +1,25 @@
+## [2025-05-09] - Configure Function App for Flex Consumption Plan
+
+**Objective:** Update the Function App's Bicep configuration to use the Flex Consumption Plan and its associated storage settings.
+
+**Summary of Changes:**
+
+*   **`infrastructure/function.bicep`:**
+    *   **Consumption Plan:**
+        *   Changed `sku.name` from `Y1` to `FC1`.
+        *   Changed `sku.tier` from `Dynamic` to `FlexConsumption`.
+    *   **Function App `appSettings`:**
+        *   Removed the `AzureWebJobsStorage` setting that used the full managed identity connection string. The Function App will now rely solely on `AzureWebJobsStorage__accountName` and `AzureWebJobsStorage__credential` for storage access via Managed Identity.
+    *   **Function App `functionAppConfig`:**
+        *   Added the `functionAppConfig.deployment.storage` property to define the deployment package storage location (`https://${storageAccountName}.blob.core.windows.net/function-deployment`) and specify `SystemAssignedIdentity` for authentication. This aligns with modern practices for Flex Consumption plans.
+    *   Retained existing CORS configuration allowing access from `https://${webAppName}.azurewebsites.net`.
+
+**Outcome:**
+*   The `function.bicep` template is now configured to deploy an Azure Function App on the Flex Consumption Plan.
+*   Storage settings are updated to reflect best practices for Managed Identity and Flex Consumption.
+
+---
+
 # Changelog
 
 ## [2025-05-09] - Azure Infrastructure Refactoring and Deployment

@@ -2,10 +2,11 @@
 // Parameters
 param location string = resourceGroup().location
 param namePrefix string = 'logocraftweb'
+param functionAppName string = 'logocraftfunc-app'
 param webAppRuntimeVersion string = '20'
 
 // Role definition IDs
-var keyVaultSecretsUserId = '4633458b-17de-408a-b874-0445c86b69e6'  // Environment-Specific ID for Key Vault Secrets User
+var keyVaultSecretsUserId = '4633458b-17de-408a-b874-0445c86b69e6' // Environment-Specific ID for Key Vault Secrets User
 
 // App Insights
 resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
@@ -112,7 +113,7 @@ resource webApp 'Microsoft.Web/sites@2022-09-01' = {
       appSettings: [
         {
           name: 'FUNCTION_APP_URL'
-          value: 'https://logocraftfunc-app.azurewebsites.net'
+          value: 'https://${functionAppName}.azurewebsites.net'
         }
         {
           name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
