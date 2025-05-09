@@ -1,0 +1,51 @@
+name: Deploy Web App
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: logocraftweb
+  NODE_VERSION: '20.x'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Install dependencies and build
+      working-directory: frontend
+      run: |
+        npm ci
+        npm run build
+
+    - name: Set up server for production
+      working-directory: frontend
+      run: |
+        # Create production-ready directory with server
+        mkdir -p deploy
+        cp -r build deploy/
+        cp server.js deploy/
+        cp package.json deploy/
+        cd deploy
+        # Install only production dependencies
+        npm ci --production
+
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        # This secret will be provided by GitHub when the workflow runs
+        # The linter warning "Context access might be invalid" can be safely ignored
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        package: frontend/deploy

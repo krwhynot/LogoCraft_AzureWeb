@@ -1,14 +1,14 @@
 {
-  "name": "api",
+  "name": "logocraft-api",
   "version": "1.0.0",
-  "description": "",
+  "description": "LogoCraft Image Processing API",
   "scripts": {
     "start": "func start"
   },
   "dependencies": {
     "@azure/identity": "^4.9.1",
     "@azure/storage-blob": "^12.27.0",
-    "node-fetch": "^2.7.0",
-    "sharp": "^0.34.1"
+    "sharp": "^0.34.1",
+    "node-fetch": "^2.7.0"
   }
 }

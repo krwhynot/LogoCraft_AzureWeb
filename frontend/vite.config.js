@@ -1,16 +1,19 @@
-// frontend/vite.config.js
+// frontend/vite.config.js - Updated for production
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+  },
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:7071', // Changed from deployed URL to local host
+        target: 'http://localhost:7071',
         changeOrigin: true,
-        secure: false, // Set to false for local http
+        secure: true,
       }
     }
   }

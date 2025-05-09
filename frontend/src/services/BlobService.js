@@ -10,6 +10,7 @@ import axios from 'axios';
  */
 const getSasUrl = async (filename, containerName = 'input-images', accessType = 'write') => {
   try {
+    // Use local API proxy instead of calling Function App directly
     const response = await fetch(`/api/GetSasToken?container=${encodeURIComponent(containerName)}&filename=${encodeURIComponent(filename)}&accessType=${accessType}`);
     
     if (!response.ok) {
@@ -62,55 +63,6 @@ export const uploadFileToBlob = async (file, filename) => {
 };
 
 /**
- * Get SAS URL for accessing a processed image
- * @param {string} blobName - Name of the blob
- * @param {string} containerName - Container name (default: 'output-images')
- * @returns {Promise<string>} - URL with SAS token
- */
-export const getReadSasUrl = async (blobName, containerName = 'output-images') => {
-  try {
-    console.log(`Getting read SAS URL for blob: ${blobName} in container: ${containerName}`);
-    return await getSasUrl(blobName, containerName, 'read');
-  } catch (error) {
-    console.error('Error getting read SAS URL:', error);
-    throw error;
-  }
-};
-
-/**
- * Fetch processed image blob from URL
- * @param {string} url - URL (direct or with SAS token)
- * @returns {Promise<Blob>}
- */
-export const getProcessedImage = async (url) => {
-  try {
-    console.log(`Fetching processed image from: ${url}`);
-    
-    // If URL doesn't have a SAS token, get one
-    if (!url.includes('?')) {
-      // Extract blob name from URL
-      const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split('/');
-      const blobName = pathParts[pathParts.length - 1];
-      const containerName = pathParts[pathParts.length - 2];
-      
-      url = await getReadSasUrl(blobName, containerName);
-      console.log(`Added SAS token to URL: ${url.substring(0, url.indexOf('?') + 15)}...`);
-    }
-    
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image from ${url}: ${response.statusText}`);
-    }
-    console.log('Image fetched successfully');
-    return await response.blob();
-  } catch (error) {
-    console.error('Error fetching processed image:', error);
-    throw error;
-  }
-};
-
-/**
  * Trigger backend image processing
  * @param {string} sourceUrl - URL of the uploaded blob
  * @param {object} formats - Object with format names as keys and boolean values
@@ -119,6 +71,8 @@ export const getProcessedImage = async (url) => {
 export const processImage = async (sourceUrl, formats) => {
   try {
     console.log('Processing image with formats:', Object.keys(formats).filter(key => formats[key]));
+    
+    // Use local API proxy instead of calling Function App directly
     const response = await fetch('/api/ProcessImage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -139,22 +93,14 @@ export const processImage = async (sourceUrl, formats) => {
       const processedImagesWithSas = await Promise.all(
         result.processedImages.map(async (image) => {
           try {
-            // If blobName is available, use it to get SAS token
-            if (image.blobName && image.containerName) {
-              const sasUrl = await getReadSasUrl(image.blobName, image.containerName);
-              return {
-                ...image,
-                url: sasUrl
-              };
-            }
-            // If blobName is not available, add SAS token to the URL
-            else if (!image.url.includes('?')) {
+            // If url doesn't have SAS token, add one
+            if (!image.url.includes('?')) {
               const imgUrlObj = new URL(image.url);
               const pathParts = imgUrlObj.pathname.split('/');
               const blobName = pathParts[pathParts.length - 1];
               const containerName = pathParts[pathParts.length - 2];
               
-              const sasUrl = await getReadSasUrl(blobName, containerName);
+              const sasUrl = await getSasUrl(blobName, containerName, 'read');
               return {
                 ...image,
                 url: sasUrl
