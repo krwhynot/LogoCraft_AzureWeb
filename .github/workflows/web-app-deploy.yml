@@ -1,0 +1,80 @@
+name: Deploy Web App
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20.x'
+    
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+    
+    - name: Build React app
+      run: |
+        cd frontend
+        npm run build
+    
+    - name: Prepare deployment package
+      run: |
+        mkdir deploy
+        cp frontend/server.js deploy/
+        cp frontend/package.json deploy/
+        cp frontend/package-lock.json deploy/
+        cp -r frontend/dist deploy/
+        
+        # Create web.config
+        cat > deploy/web.config << 'EOL'
+        <?xml version="1.0" encoding="utf-8"?>
+        <configuration>
+          <system.webServer>
+            <webSocket enabled="false" />
+            <handlers>
+              <add name="iisnode" path="server.js" verb="*" modules="iisnode"/>
+            </handlers>
+            <rewrite>
+              <rules>
+                <rule name="StaticContent">
+                  <action type="Rewrite" url="dist{REQUEST_URI}"/>
+                </rule>
+                <rule name="DynamicContent">
+                  <conditions>
+                    <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="True"/>
+                  </conditions>
+                  <action type="Rewrite" url="server.js"/>
+                </rule>
+              </rules>
+            </rewrite>
+            <iisnode watchedFiles="web.config;*.js"/>
+          </system.webServer>
+        </configuration>
+        EOL
+        
+        cd deploy
+        zip -r ../web-app-deploy.zip .
+    
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Deploy Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'logocraftweb-app'
+        package: './web-app-deploy.zip'

@@ -1,0 +1,65 @@
+name: Deploy Azure Infrastructure
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'infrastructure/**'
+  workflow_dispatch:
+
+jobs:
+  deploy-infrastructure:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Deploy Web Resource Group
+      uses: azure/cli@v1
+      with:
+        inlineScript: |
+          az group create --name LogoCraft-Web-RG --location centralus
+    
+    - name: Deploy Function Resource Group
+      uses: azure/cli@v1
+      with:
+        inlineScript: |
+          az group create --name LogoCraft-Func-RG --location centralus
+    
+    - name: Deploy main infrastructure
+      uses: azure/arm-deploy@v1
+      with:
+        deploymentName: github-${{ github.run_number }}
+        scope: resourcegroup
+        resourceGroupName: 'LogoCraft-Web-RG'
+        template: ./infrastructure/main.bicep
+        parameters: 'namePrefix=logocraftweb functionAppName=logocraftfunc-app webAppRuntimeVersion=20'
+    
+    - name: Get outputs from main deployment
+      id: mainDeploy
+      run: |
+        STORAGE_ACCOUNT_NAME=$(az deployment group show --resource-group 'LogoCraft-Web-RG' --name github-${{ github.run_number }} --query properties.outputs.storageAccountName.value -o tsv)
+        APP_INSIGHTS_CONNECTION_STRING=$(az deployment group show --resource-group 'LogoCraft-Web-RG' --name github-${{ github.run_number }} --query properties.outputs.appInsightsConnectionString.value -o tsv)
+        
+        echo "storageAccountName=$STORAGE_ACCOUNT_NAME" >> $GITHUB_OUTPUT
+        echo "appInsightsConnectionString=$APP_INSIGHTS_CONNECTION_STRING" >> $GITHUB_OUTPUT
+    
+    - name: Deploy Function App infrastructure
+      uses: azure/arm-deploy@v1
+      with:
+        deploymentName: github-func-${{ github.run_number }}
+        scope: resourcegroup
+        resourceGroupName: 'LogoCraft-Func-RG'
+        template: ./infrastructure/function.bicep
+        parameters: >
+          namePrefix=logocraftfunc
+          functionAppRuntimeVersion=20
+          storageAccountName=${{ steps.mainDeploy.outputs.storageAccountName }}
+          webAppName=logocraftweb-app
+          appInsightsConnectionString='${{ steps.mainDeploy.outputs.appInsightsConnectionString }}'
