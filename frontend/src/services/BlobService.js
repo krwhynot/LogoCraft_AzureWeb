@@ -122,3 +122,20 @@ export const processImage = async (sourceUrl, formats) => {
     throw error;
   }
 };
+
+/**
+ * Fetches the content of a processed image from its URL (presumably with SAS).
+ * @param {string} imageUrlWithSas - The URL of the image to fetch.
+ * @returns {Promise<Blob>} The image data as a Blob.
+ */
+export const getProcessedImage = async (imageUrlWithSas) => {
+  try {
+    const response = await axios.get(imageUrlWithSas, {
+      responseType: 'blob' // Important to get the raw blob data
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching processed image from ${imageUrlWithSas}:`, error);
+    throw error;
+  }
+};

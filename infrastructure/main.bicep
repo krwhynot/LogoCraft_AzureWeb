@@ -1,19 +1,15 @@
+// main.bicep - For the Web App resource group (LogoCraft-Web-RG)
 // Parameters
 param location string = resourceGroup().location
-param namePrefix string = 'logocraft${uniqueString(resourceGroup().id)}'
-param functionAppRuntimeVersion string = '20'
+param namePrefix string = 'logocraftweb'
 param webAppRuntimeVersion string = '20'
 
 // Role definition IDs
-var keyVaultSecretsUserId = '4633458b-17de-408a-b874-08cd206e471fa'
-var blobContributorId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
-var blobDelegatorId = 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
-var queueContributorId = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
-var tableContributorId = '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'
+var keyVaultSecretsUserId = '4633458b-17de-408a-b874-0445c86b69e6'  // Environment-Specific ID for Key Vault Secrets User
 
 // App Insights
 resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
-  name: '${namePrefix}appi'
+  name: '${namePrefix}-insights'
   location: location
   kind: 'web'
   properties: {
@@ -23,7 +19,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 
 // Storage Account + Containers
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
-  name: '${namePrefix}st'
+  name: '${namePrefix}store${take(uniqueString(resourceGroup().id), 5)}'
   location: location
   kind: 'StorageV2'
   sku: {
@@ -42,89 +38,51 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
 }
 
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
-  name: '${storageAccount.name}/default'
+  parent: storageAccount
+  name: 'default'
   properties: {
     deleteRetentionPolicy: {
       enabled: true
       days: 7
     }
   }
-  resource inputContainer 'containers' = {
-    name: 'input-images'
-    properties: {
-      publicAccess: 'None'
-    }
-  }
-  resource outputContainer 'containers' = {
-    name: 'output-images'
-    properties: {
-      publicAccess: 'None'
-    }
+}
+
+resource inputContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  parent: blobService
+  name: 'input-images'
+  properties: {
+    publicAccess: 'None'
   }
 }
 
-// Flex Consumption Plan
-resource flexPlan 'Microsoft.Web/serverfarms@2022-09-01' = {
-  name: '${namePrefix}funcplan'
-  location: location
-  sku: {
-    name: 'FC1'
-    tier: 'FlexConsumption'
-  }
-  kind: 'linux'
+resource outputContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  parent: blobService
+  name: 'output-images'
   properties: {
-    reserved: true
+    publicAccess: 'None'
   }
 }
 
-// Function App
-resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
-  name: '${namePrefix}func'
+// Key Vault with completely new name
+resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
+  name: 'webvault${take(uniqueString(resourceGroup().id), 8)}'
   location: location
-  kind: 'functionapp,linux'
-  identity: {
-    type: 'SystemAssigned'
-  }
   properties: {
-    serverFarmId: flexPlan.id
-    httpsOnly: true
-    siteConfig: {
-      linuxFxVersion: 'NODE|${functionAppRuntimeVersion}'
-      ftpsState: 'Disabled'
-      cors: {
-        allowedOrigins: [
-          'https://${namePrefix}web.azurewebsites.net'
-        ]
-      }
-      appSettings: [
-        {
-          name: 'AzureWebJobsStorage__accountName'
-          value: storageAccount.name
-        }
-        {
-          name: 'AzureWebJobsStorage__credential'
-          value: 'managedidentity'
-        }
-        {
-          name: 'STORAGE_ACCOUNT_NAME'
-          value: storageAccount.name
-        }
-        {
-          name: 'FUNCTIONS_EXTENSION_VERSION'
-          value: '~4'
-        }
-        {
-          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-          value: appInsights.properties.ConnectionString
-        }
-      ]
+    tenantId: subscription().tenantId
+    enableSoftDelete: true
+    enablePurgeProtection: true
+    enableRbacAuthorization: true
+    sku: {
+      family: 'A'
+      name: 'standard'
     }
   }
 }
 
 // App Service Plan for Web App
 resource webPlan 'Microsoft.Web/serverfarms@2022-09-01' = {
-  name: '${namePrefix}plan'
+  name: '${namePrefix}-plan'
   location: location
   sku: {
     name: 'B1'
@@ -138,9 +96,9 @@ resource webPlan 'Microsoft.Web/serverfarms@2022-09-01' = {
 
 // Web App
 resource webApp 'Microsoft.Web/sites@2022-09-01' = {
-  name: '${namePrefix}web'
+  name: '${namePrefix}-app'
   location: location
-  kind: 'app'
+  kind: 'app,linux'
   identity: {
     type: 'SystemAssigned'
   }
@@ -154,7 +112,7 @@ resource webApp 'Microsoft.Web/sites@2022-09-01' = {
       appSettings: [
         {
           name: 'FUNCTION_APP_URL'
-          value: 'https://${functionApp.name}.azurewebsites.net'
+          value: 'https://logocraftfunc-app.azurewebsites.net'
         }
         {
           name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
@@ -169,68 +127,7 @@ resource webApp 'Microsoft.Web/sites@2022-09-01' = {
   }
 }
 
-// Key Vault
-resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
-  name: '${namePrefix}kv'
-  location: location
-  properties: {
-    tenantId: subscription().tenantId
-    enableSoftDelete: true
-    enablePurgeProtection: true
-    enableRbacAuthorization: true
-    sku: {
-      family: 'A'
-      name: 'standard'
-    }
-  }
-}
-
-// Role Assignments (Function App)
-resource blobRA 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storageAccount.id, functionApp.id, 'blob')
-  scope: storageAccount
-  properties: {
-    principalId: functionApp.identity.principalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', blobContributorId)
-    principalType: 'ServicePrincipal'
-  }
-}
-resource blobDelegatorRA 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storageAccount.id, functionApp.id, 'delegator')
-  scope: storageAccount
-  properties: {
-    principalId: functionApp.identity.principalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', blobDelegatorId)
-    principalType: 'ServicePrincipal'
-  }
-}
-resource queueRA 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storageAccount.id, functionApp.id, 'queue')
-  scope: storageAccount
-  properties: {
-    principalId: functionApp.identity.principalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', queueContributorId)
-    principalType: 'ServicePrincipal'
-  }
-}
-resource tableRA 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storageAccount.id, functionApp.id, 'table')
-  scope: storageAccount
-  properties: {
-    principalId: functionApp.identity.principalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', tableContributorId)
-    principalType: 'ServicePrincipal'
-  }
-}
-resource functionKVRA 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVault.id, functionApp.id, 'kv')
-  scope: keyVault
-  properties: {
-    principalId: functionApp.identity.principalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserId)
-    principalType: 'ServicePrincipal'
-  }
-}
+// Role Assignment for Web App to access Key Vault
 resource webKVRA 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(keyVault.id, webApp.id, 'kv')
   scope: keyVault
@@ -242,7 +139,9 @@ resource webKVRA 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 }
 
 // Outputs
-output functionAppHostName string = functionApp.properties.defaultHostName
 output webAppHostName string = webApp.properties.defaultHostName
 output keyVaultName string = keyVault.name
 output keyVaultUri string = keyVault.properties.vaultUri
+output storageAccountName string = storageAccount.name
+output storageAccountId string = storageAccount.id
+output appInsightsConnectionString string = appInsights.properties.ConnectionString
