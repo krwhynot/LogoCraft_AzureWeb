@@ -49,12 +49,10 @@ jobs:
             </handlers>
             <rewrite>
               <rules>
-                <rule name="StaticContent">
-                  <action type="Rewrite" url="dist{REQUEST_URI}"/>
-                </rule>
                 <rule name="DynamicContent">
                   <conditions>
                     <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="True"/>
+                    <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="True"/>
                   </conditions>
                   <action type="Rewrite" url="server.js"/>
                 </rule>
