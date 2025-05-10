@@ -26,63 +26,54 @@
    - CSS variables for consistent theming
    - Active/inactive panel states based on current step
 
-4. **Backend Structure**:
-   - Azure Functions project structure correctly set up
-   - GetSasToken function for secure blob storage access with Managed Identity
-   - ProcessImage function for image transformation
-   - Proper HTTP trigger bindings configured
-   - Dependencies installed (Sharp, Azure Storage SDK, Azure Identity)
-   - Error handling with detailed error messages
-   - Local development support using storage account keys
-   - Production-ready with Azure Managed Identity authentication
+4. **Backend Structure (Simplified)**:
+   - Single Azure Function (`api/ProcessImage`) consolidated to handle SAS token generation and image processing.
+   - Uses Azure Storage connection string for SAS token generation and blob access.
+   - Dependencies (Sharp, Azure Storage SDK) remain relevant. Azure Identity SDK is not used for auth in this version.
+   - Error handling and local development support (via connection string in `local.settings.json` or SWA CLI) maintained.
 
-5. **Documentation**:
-   - Comprehensive architecture documentation in systemPatterns.md
+5. **Documentation (Updated for Simplification)**:
+   - New `projectbrief.md` created for the simplified architecture.
+   - `systemPatterns.md` updated to reflect SWA, single function, and SAS token auth.
    - Technical context documented in techContext.md
    - Product context documented in productContext.md
-   - Active development context in activeContext.md
-   - Progress tracking in progress.md
+   - `techContext.md` updated.
+   - `progress.md` (this file) updated.
+   - `activeContext.md` will be updated.
+   - `azure-architecture-template.md` to be reviewed/updated.
 
-## What's left to build
-1. **Backend Deployment**:
-   - Deploy Azure Functions to Azure
-   - Configure Azure Blob Storage containers
-   - Set up environment variables and application settings
-   - Test deployed functions with API tools
+## What's left to build (Post-Simplification)
+1.  **Deployment & Testing of Simplified Architecture**:
+    *   Deploy Azure Static Web App (with integrated function) and Storage Account using updated Bicep and GitHub Actions.
+    *   Thoroughly test end-to-end functionality: SAS generation, file upload, image processing, and download.
+    *   Verify Azure Storage container configurations (`uploads` private, `downloads` public).
+    *   Ensure application settings (especially `AZURE_STORAGE_CONNECTION_STRING`) are correctly configured in SWA for the function.
 
-2. **Frontend-Backend Integration**:
-   - Update BlobService.js to use actual Azure Function endpoints
-   - Implement proper error handling for API calls
-   - Add authentication and authorization if needed
-   - Test end-to-end functionality
+2.  **Core Feature Completion (if not fully covered by existing UI logic)**:
+    *   Ensure actual download functionality for individual processed images works with public URLs.
+    *   Implement client-side ZIP file creation for batch downloads using fetched processed images.
 
-3. **Enhanced Features**:
-   - Actual download functionality for processed images
-   - Zip file creation for batch downloads
-   - Custom output directory selection
-   - Additional image processing options (quality, background, etc.)
+3.  **Future Enhancements (Post-MVP Simplification)**:
+    *   Re-evaluate and potentially implement Managed Identity for Azure Storage access for enhanced security (as was previously worked on).
+    *   Consider adding user authentication for the application if needed.
+    *   API endpoint security (e.g., SWA built-in auth, API keys if function is exposed directly).
+    *   Input validation and sanitization improvements.
+    *   Rate limiting for API requests.
+    *   UI Improvements (mobile experience, dark mode, accessibility).
+    *   Additional image processing options.
 
-4. **UI Improvements**:
-   - Better mobile experience
-   - Dark mode support
-   - Accessibility improvements
-   - Collapsible panels and more advanced UI interactions
+## Progress status (Post-Simplification Refactoring - In Progress)
+- **Frontend UI**: 95% complete.
+- **Frontend Logic (BlobService.js)**: Updated for single API endpoint (100% for this refactor).
+- **Backend API Structure**: Simplified to single function (100% for this refactor).
+- **Backend API Implementation**: Consolidated function logic for SAS (connection string) and processing (100% for this refactor).
+- **Infrastructure (Bicep)**: Updated for SWA and simplified storage (100% for this refactor).
+- **CI/CD Workflows**:
+    - SWA deployment workflow updated (100% for this refactor).
+    - Infrastructure deployment workflow updated (100% for this refactor).
+    - Unneeded workflows deleted.
+- **Security Model**: Shifted to function-generated SAS (via connection string) for initial simplicity.
+- **Deployment**: Pending first deployment of the simplified architecture.
+- **Documentation**: Updated for simplified architecture (project brief created, system patterns, tech context, progress updated).
 
-5. **Security Enhancements**:
-   - Add authentication for API endpoints
-   - Input validation and sanitization
-   - Rate limiting for API requests
-   - ✅ Secure storage access with Azure Managed Identity (completed)
-
-## Progress status
-- **Frontend UI**: 95% complete (layout improvements implemented)
-- **Frontend Logic**: 70% complete (simulation only)
-- **Backend API Structure**: 100% complete (folder structure fixed)
-- **Backend API Implementation**: 90% complete (Azure Managed Identity implemented)
-- **Backend API Deployment**: 0% complete (not yet deployed to Azure)
-- **Image Processing**: 80% complete (code exists but not tested with real storage)
-- **Security Enhancements**: 70% complete (Azure Managed Identity implemented)
-- **Deployment**: 0% complete
-- **Documentation**: 95% complete (architecture and managed identity documentation added)
-
-Current focus: Completed implementation of Azure Managed Identity authentication for secure, key-free storage access. The next step is to deploy the Azure Functions to Azure and connect the frontend to the deployed endpoints.
+Current focus: Completing the refactoring for a simplified Azure Static Web App architecture with an integrated function using SAS token (via connection string) authentication. Next steps involve deploying this simplified architecture and conducting end-to-end testing.

@@ -1,14 +1,20 @@
-// main.bicep - For the Web App resource group (LogoCraft-Web-RG)
-// Parameters
+@description('Location for all resources.')
 param location string = resourceGroup().location
-param namePrefix string = 'logocraftweb'
-param functionAppName string = 'logocraftfunc-app'
-param webAppRuntimeVersion string = '20'
 
-// Role definition IDs
-var keyVaultSecretsUserId = '4633458b-17de-408a-b874-0445c86b69e6' // Environment-Specific ID for Key Vault Secrets User
+@description('Prefix for resource names.')
+param namePrefix string = 'logocraft' // Simplified prefix
 
-// App Insights
+@description('Name of the Static Web App.')
+param staticWebAppName string = '${namePrefix}swa${uniqueString(resourceGroup().id)}'
+
+@description('SKU for the Static Web App. Standard includes managed functions.')
+param staticWebAppSkuName string = 'Standard' // or 'Free' if no managed functions initially, but 'Standard' is better for integrated APIs.
+
+@description('Name of the main storage account for application data.')
+param storageAccountName string = '${namePrefix}st${uniqueString(resourceGroup().id)}'
+
+
+// Application Insights
 resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: '${namePrefix}-insights'
   location: location
@@ -18,9 +24,9 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
-// Storage Account + Containers
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
-  name: '${namePrefix}store${take(uniqueString(resourceGroup().id), 5)}'
+// Main Storage Account for application data (uploads and downloads)
+resource mainStorageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
+  name: storageAccountName
   location: location
   kind: 'StorageV2'
   sku: {
@@ -28,8 +34,8 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
   properties: {
     minimumTlsVersion: 'TLS1_2'
-    allowBlobPublicAccess: false
-    allowSharedKeyAccess: false
+    allowBlobPublicAccess: true // Required for the 'downloads' container to have public blobs
+    allowSharedKeyAccess: true   // Required for functions to use connection string
     publicNetworkAccess: 'Enabled'
     networkAcls: {
       defaultAction: 'Allow'
@@ -38,8 +44,8 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
-resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
-  parent: storageAccount
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
+  parent: mainStorageAccount
   name: 'default'
   properties: {
     deleteRetentionPolicy: {
@@ -49,100 +55,66 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01'
   }
 }
 
-resource inputContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+resource uploadsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
   parent: blobService
-  name: 'input-images'
+  name: 'uploads' // As per simplified plan
   properties: {
-    publicAccess: 'None'
+    publicAccess: 'None' // Private, accessed via SAS
   }
 }
 
-resource outputContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+resource downloadsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
   parent: blobService
-  name: 'output-images'
+  name: 'downloads' // As per simplified plan
   properties: {
-    publicAccess: 'None'
+    publicAccess: 'Blob' // Public read access for blobs
   }
 }
 
-// Key Vault with completely new name
-resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
-  name: 'webvault${take(uniqueString(resourceGroup().id), 8)}'
-  location: location
-  properties: {
-    tenantId: subscription().tenantId
-    enableSoftDelete: true
-    enablePurgeProtection: true
-    enableRbacAuthorization: true
-    sku: {
-      family: 'A'
-      name: 'standard'
-    }
-  }
-}
-
-// App Service Plan for Web App
-resource webPlan 'Microsoft.Web/serverfarms@2022-09-01' = {
-  name: '${namePrefix}-plan'
+// Static Web App
+resource staticWebApp 'Microsoft.Web/staticSites@2023-01-01' = {
+  name: staticWebAppName
   location: location
   sku: {
-    name: 'B1'
-    tier: 'Basic'
+    name: staticWebAppSkuName
+    tier: staticWebAppSkuName // For SWA, name and tier are often the same (e.g., 'Standard')
   }
-  kind: 'linux'
+  // identity: { // System-assigned identity can be enabled if needed later
+  //   type: 'SystemAssigned'
+  // }
   properties: {
-    reserved: true
-  }
-}
-
-// Web App
-resource webApp 'Microsoft.Web/sites@2022-09-01' = {
-  name: '${namePrefix}-app'
-  location: location
-  kind: 'app,linux'
-  identity: {
-    type: 'SystemAssigned'
-  }
-  properties: {
-    serverFarmId: webPlan.id
-    httpsOnly: true
-    siteConfig: {
-      linuxFxVersion: 'NODE|${webAppRuntimeVersion}'
-      ftpsState: 'Disabled'
-      alwaysOn: true
-      appSettings: [
-        {
-          name: 'FUNCTION_APP_URL'
-          value: 'https://${functionAppName}.azurewebsites.net'
-        }
-        {
-          name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
-          value: 'false'
-        }
-        {
-          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-          value: appInsights.properties.ConnectionString
-        }
-      ]
+    // Assuming deployment via GitHub Actions, so these are set in the workflow
+    // repositoryUrl: 'YOUR_GITHUB_REPO_URL'
+    // branch: 'main'
+    // repositoryToken: 'YOUR_GITHUB_PAT_OR_APP_SECRET' // Handled by SWA token in workflow
+    buildProperties: {
+      appLocation: 'frontend'
+      apiLocation: 'api' // Location of the Azure Functions
+      appArtifactLocation: 'dist' // Build output from 'frontend/dist'
+      // nodeVersion: '20' // Can be specified here or in workflow
     }
   }
 }
 
-// Role Assignment for Web App to access Key Vault
-resource webKVRA 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVault.id, webApp.id, 'kv')
-  scope: keyVault
+// App Settings for the Static Web App (and its integrated functions)
+// Note: Connection strings are sensitive and should ideally be managed via Key Vault references in a production SWA,
+// but for initial simplicity as per the plan, we can set them directly.
+// The SWA deployment token in GitHub Actions is the primary secret for deployment.
+resource swaAppSettings 'Microsoft.Web/staticSites/config@2023-01-01' = {
+  parent: staticWebApp
+  name: 'appsettings'
   properties: {
-    principalId: webApp.identity.principalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserId)
-    principalType: 'ServicePrincipal'
+    // Connection string for the Azure Function to access the main storage account
+    'AZURE_STORAGE_CONNECTION_STRING': listKeys(mainStorageAccount.id, mainStorageAccount.apiVersion).keys[0].value
+    'AzureWebJobsStorage': listKeys(mainStorageAccount.id, mainStorageAccount.apiVersion).keys[0].value // SWA managed functions might use this too
+    'APPLICATIONINSIGHTS_CONNECTION_STRING': appInsights.properties.ConnectionString
+    // Add other necessary environment variables for your functions here
+    // 'STORAGE_ACCOUNT_NAME': mainStorageAccount.name // Already part of connection string, but can be explicit
   }
 }
 
 // Outputs
-output webAppHostName string = webApp.properties.defaultHostName
-output keyVaultName string = keyVault.name
-output keyVaultUri string = keyVault.properties.vaultUri
-output storageAccountName string = storageAccount.name
-output storageAccountId string = storageAccount.id
-output appInsightsConnectionString string = appInsights.properties.ConnectionString
+output staticWebAppDefaultHostName string = staticWebApp.properties.defaultHostname
+output staticWebAppId string = staticWebApp.id
+output storageAccount_Name string = mainStorageAccount.name // Renamed for clarity
+output appInsights_ConnectionString string = appInsights.properties.ConnectionString // Renamed for clarity

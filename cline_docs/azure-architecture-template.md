@@ -20,15 +20,14 @@ Browser/Client
    ↓
 [Azure Static Web App (logocraft-frontend)]
    ↓                                ↘
-[API via Azure Functions (logocraftfunctions)]  →  [Blob Storage (logocraftstorage2200)]
-   |                                                      ↑
-   ↓                                                      |
-[GetSasToken] → Return SAS URL to client for direct upload  
+[API via Azure Functions (logocraftfunctions - integrated with SWA)]  →  [Blob Storage (logocraftstorage)]
+   |                                                                         ↑ (uploads container)
+   ↓                                                                         | (downloads container)
+[Single Function: ProcessImageAndSas] 
+  (Action: getUploadSas) → Returns SAS URL to client for direct upload to 'uploads' container
+  (Action: processImage) → Reads from 'uploads', processes, writes to 'downloads' container
    ↓
-[ProcessImage] → Process uploaded images and generate new formats
-                  using Sharp library (PNG/BMP conversion)
-   ↓
-[Return processed image URLs to client for download]
+[Return processed image URLs (from 'downloads' container) to client for download]
    ↓
 [Client downloads images and creates ZIP file for user]
 ```
@@ -39,32 +38,32 @@ Browser/Client
 
 | Component             | Method                                                    | Notes |
 | --------------------- | --------------------------------------------------------- | ----- |
-| Static Web App        | None (Public access)                                      | No user authentication required |
-| Azure Functions (API) | Anonymous HTTP Triggers                                   | Public API endpoints |
-| Blob Storage          | Dual-Mode Authentication | **Production**: Azure Managed Identity<br>**Development**: Storage Account Key |
+| Static Web App        | None (Public access)                                      | No user authentication required. |
+| Azure Functions (API) | Anonymous HTTP Triggers                                   | Public API endpoints; part of SWA. |
+| Blob Storage          | Function-Generated SAS Tokens (via Connection String)     | Function uses storage connection string to generate SAS for 'uploads'. 'downloads' is public. |
 
 > **Checklist:**
 
 * ☑ SWA Auth Providers configured - N/A (public access)
 * ☐ Role-based access rules set in `staticwebapp.config.json` - N/A (public access)
-* ☑ CORS rules defined for Blob + Functions
-* ☑ Blob access (Private/Container/Public) - Private with SAS tokens
-* ☑ RBAC roles assigned - Storage Blob Data Contributor & Storage Blob Delegator
+* ☑ CORS rules defined for Blob + Functions (SWA manages Function CORS, Blob CORS for direct uploads)
+* ☑ Blob access: `uploads` (Private with SAS), `downloads` (Public Blob)
+* ☐ RBAC roles assigned - N/A for connection string SAS (relevant if/when re-introducing Managed Identity)
 
 ---
 
-### 🧠 4. **Environment Variables / App Settings**
+### 🧠 4. **Environment Variables / App Settings (Static Web App)**
 
-| Environment | Static Web App | Azure Functions | Notes |
-| ----------- | -------------- | --------------- | ----- |
-| Development | N/A | STORAGE_ACCOUNT_NAME=logocraftstorage2200<br>STORAGE_ACCOUNT_KEY=[key-value]<br>AzureWebJobsStorage=[connection-string] | Local development uses storage account key |
-| Production  | N/A | STORAGE_ACCOUNT_NAME=logocraftstorage2200<br>AzureWebJobsStorage=[connection-string] | Production uses Managed Identity for app code, but still needs connection string for Functions runtime |
+| Setting Name                            | Example Value / Notes                                     | Scope    |
+| --------------------------------------- | --------------------------------------------------------- | -------- |
+| `AZURE_STORAGE_CONNECTION_STRING`       | `DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...` | SWA App Settings (for integrated Function) |
+| `AzureWebJobsStorage`                   | (Can often be same as `AZURE_STORAGE_CONNECTION_STRING` for SWA managed functions or managed by SWA) | SWA App Settings |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | `InstrumentationKey=...`                                  | SWA App Settings |
 
 > **Checklist:**
 
-* ☑ Environment secrets configured in SWA and Function App
-* ☑ Storage keys / connection strings securely stored (Managed Identity for app code)
-* ☑ AzureWebJobsStorage connection string properly configured (required for Functions runtime)
+* ☑ Environment secrets (like `AZURE_STORAGE_CONNECTION_STRING`) configured in SWA Application Settings.
+* ☑ `AzureWebJobsStorage` configured for SWA managed functions.
 
 ---
 
@@ -72,38 +71,35 @@ Browser/Client
 
 | Setting                  | Value / Notes |
 | ------------------------ | ------------- |
-| Access Level             | Private |
-| Containers               | input-images, output-images |
-| CORS Rules               | Allow origins from SWA URL and localhost for development |
+| Access Level             | `uploads` (Private), `downloads` (Blob - Public Read) |
+| Containers               | `uploads`, `downloads` |
+| CORS Rules               | Allow SWA origin for direct uploads to `uploads` container. |
 | Lifecycle Rules (if any) | None specified |
-| SAS Tokens Used?         | ☑ Yes ☐ No    |
-| Managed Identity Access? | ☑ Yes ☐ No    |
-| SAS Token Expiry         | 1-hour validity period |
+| SAS Tokens Used?         | ☑ Yes (for `uploads` container, generated by function) ☐ No    |
+| Managed Identity Access? | ☐ Yes ☑ No (Using connection string for this version)   |
+| SAS Token Expiry         | 1-hour validity period (for upload SAS) |
 
 ---
 
-### ⚙️ 6. **Function App (API) Details**
+### ⚙️ 6. **Function App (API) Details (Integrated with SWA)**
 
 | Item                  | Value / Notes                |
 | --------------------- | ---------------------------- |
 | Runtime Stack         | Node.js 18+                  |
 | Authorization Level   | Anonymous                    |
 | Route Prefix          | api                          |
-| CORS Enabled?         | ☑ Yes ☐ No                   |
-| Blob Access Mechanism | Dual-mode authentication:<br>- Production: Azure SDK with Managed Identity (@azure/storage-blob, @azure/identity)<br>- Development: Storage Account Key |
-| Dependencies          | sharp, node-fetch, @azure/storage-blob, @azure/identity |
+| CORS Enabled?         | ☑ Yes (Managed by SWA or function code if needed) |
+| Blob Access Mechanism | Azure SDK (`@azure/storage-blob`) with Storage Account Connection String. |
+| Dependencies          | sharp, node-fetch, @azure/storage-blob |
 
-> **API Endpoints:**
-- `/api/GetSasToken` 
-  - **Purpose**: Generates SAS tokens for blob storage access
-  - **Method**: GET
-  - **Parameters**: container (default: input-images), filename (optional), accessType (read/write)
-  - **Response**: blobUrlWithSas, sasToken
-- `/api/ProcessImage` 
-  - **Purpose**: Processes uploaded images into multiple formats
-  - **Method**: POST
-  - **Body**: sourceUrl, formats (object with format names as keys and boolean values)
-  - **Response**: processedImages (array of processed image metadata)
+> **API Endpoints (Single Function e.g., `/api/ProcessImage`):**
+- **GET** `?action=getUploadSas&filename=<filename>`
+  - **Purpose**: Generates SAS token for client-side upload to `uploads` container.
+  - **Response**: `{ uploadUrl: string, blobName: string }`
+- **POST** `?action=processImage`
+  - **Purpose**: Processes an image previously uploaded to the `uploads` container.
+  - **Body**: `{ sourceBlobName: string, formats: object }`
+  - **Response**: `{ processedImages: Array<{ name: string, url: string, size: string, dimensions: object }> }` (URLs are direct public links to `downloads` container).
 
 ---
 
@@ -118,9 +114,9 @@ Browser/Client
 
 > **Checklist:**
 
-* ☑ `.github/workflows/azure-static-web-apps-lemon-tree-062b8be10.yml` present
-* ☑ Deployment token or GitHub Actions authorized
-* ☑ Branch filters (e.g., prod = main, PR deployment)
+* ☑ `.github/workflows/web-app-deploy.yml` (or similar SWA workflow file) present and configured.
+* ☑ SWA Deployment token (`AZURE_STATIC_WEB_APPS_API_TOKEN`) configured in GitHub secrets.
+* ☑ Branch filters (e.g., main branch triggers production deployment).
 
 ---
 
@@ -145,47 +141,40 @@ Browser/Client
 
 ### ✅ 10. **Final Checklist**
 
-| Area                            | Completed? |
-| ------------------------------- | ---------- |
-| Auth setup                      | ☑          |
-| Blob storage configured         | ☑          |
-| API tested locally/remotely     | ☑          |
-| Environment vars injected       | ☑          |
-| GitHub Actions pipeline working | ☑          |
-| CORS configured                 | ☑          |
-| Secrets secured                 | ☑          |
-| Custom domain setup             | ☐          |
-| RBAC roles assigned             | ☑          |
-| Local development tested        | ☑          |
+| Area                            | Completed? | Notes |
+| ------------------------------- | ---------- | ----- |
+| Auth setup (SAS via conn string)| ☑          | Simplified for initial deployment. |
+| Blob storage configured         | ☑          | `uploads` (private), `downloads` (public). |
+| API (single function) tested    | ☐          | Pending deployment and testing. |
+| Environment vars injected (SWA) | ☐          | To be verified upon deployment. |
+| GitHub Actions pipeline working | ☑          | Workflows updated for SWA. |
+| CORS configured                 | ☑          | SWA default, Blob for uploads. |
+| Secrets secured (GH & SWA)      | ☐          | Requires `AZURE_STATIC_WEB_APPS_API_TOKEN` and `AZURE_STORAGE_CONNECTION_STRING` in SWA settings. |
+| Custom domain setup             | ☐          | Future consideration. |
+| RBAC roles assigned             | N/A        | Not primary for conn string SAS. |
+| Local development tested        | ☐          | Pending full local test with SWA CLI or similar. |
 
 ---
 
 ### 📋 **Key Implementation Notes:**
 
-1. **Dual-Mode Authentication** is implemented for the Azure Functions:
-   - **Production**: Uses Azure Managed Identity for secure, key-free authentication to Azure Storage
-     - System-assigned Managed Identity for Function App
-     - RBAC roles assigned: Storage Blob Data Contributor & Storage Blob Delegator
-     - User delegation keys for SAS token generation
-   - **Development**: Uses Storage Account Key stored in local settings
-     - StorageSharedKeyCredential for SAS generation in local environment
-     - Connection string approach for creating BlobServiceClient
+1.  **Authentication Model (Simplified):**
+    *   The integrated Azure Function uses an Azure Storage Account connection string (from SWA app settings) to generate SAS tokens for client uploads to the `uploads` container.
+    *   This approach defers Managed Identity for initial simplicity.
 
-2. **Storage Access Method**:
-   - GetSasToken function generates time-limited (1-hour) SAS tokens for direct client uploads
-   - ProcessImage function tries two options for downloading source images:
-     - Option 1: Managed Identity to access blobs directly
-     - Option 2: Falling back to the provided SAS URL if Option 1 fails
+2.  **Storage Access & Containers:**
+    *   `uploads` container: Private, written to by clients using function-generated SAS tokens.
+    *   `downloads` container: Public read access for blobs, allowing direct URL access to processed images.
+    *   The function reads from `uploads` and writes to `downloads` using its connection string.
 
-3. **Image Processing Flow**:
-   - User uploads image to browser
-   - Frontend gets SAS token from Azure Function
-   - Frontend directly uploads to Azure Blob Storage
-   - Frontend requests image processing via Azure Function
-   - Backend processes images using Sharp library and returns URLs
-   - Frontend downloads processed images and creates ZIP file for user
+3.  **Image Processing Flow (Simplified API):**
+    *   Client requests an upload SAS URL from the single Azure Function (`/api/ProcessImage?action=getUploadSas`).
+    *   Client uploads the image directly to the `uploads` container using the SAS URL.
+    *   Client requests image processing from the same Azure Function (`/api/ProcessImage?action=processImage`), providing the `sourceBlobName`.
+    *   Function processes the image and returns an array of public URLs for the processed images in the `downloads` container.
+    *   Client downloads/uses these public URLs.
 
-4. **Supported Image Formats**:
+4.  **Supported Image Formats**:
    - Input: PNG, JPEG, GIF, BMP, TIFF, WebP
    - Output: 
      - PNG formats with configurable dimensions

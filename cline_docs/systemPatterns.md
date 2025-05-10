@@ -3,19 +3,19 @@
 ## How the system is built
 LogoCraftWeb is built as a React-based web application with a clear separation between the frontend and backend components:
 
-1. **Frontend**: React application with Bootstrap for UI components
+1. **Frontend**: React application hosted on **Azure Static Web Apps**
    - Uses React hooks for state management
    - Implements a component-based architecture
    - Utilizes Bootstrap for responsive layout and styling
-   - Vite is used as the build tool and development server
+   - Vite is used as the build tool. Azure Static Web Apps handles serving.
 
-2. **Backend**: Azure Functions serverless API
-   - Handles image processing and storage operations
-   - Provides RESTful endpoints for the frontend to interact with
-   - Uses Azure Blob Storage for image storage
-   - Implements two main functions:
-     - GetSasToken: Generates SAS tokens for secure blob storage access
-     - ProcessImage: Handles image processing with the Sharp library
+2. **Backend**: **Single Azure Function (integrated with Static Web App)**
+   - Handles SAS token generation for uploads and all image processing operations.
+   - Provides a consolidated RESTful endpoint for the frontend.
+   - Uses Azure Blob Storage for image storage.
+   - Implements one main HTTP-triggered function (e.g., `ProcessImageAndSas`) responsible for:
+     - Generating SAS tokens for client-side uploads to the `uploads` container.
+     - Processing images from the `uploads` container and saving results to the `downloads` container.
 
 ## Key technical decisions
 1. **Component Structure**: The UI is divided into modular components, each responsible for a specific part of the functionality:
@@ -45,20 +45,22 @@ LogoCraftWeb is built as a React-based web application with a clear separation b
    - CSS variables define a consistent color scheme and theme
    - Responsive design adapts to different screen sizes
 
-4. **Serverless Architecture**: Uses Azure Functions for backend processing
-   - Event-driven, scalable compute service
-   - Pay-per-execution model for cost efficiency
-   - Stateless functions that can scale independently
-   - HTTP-triggered functions for RESTful API endpoints
-   - Anonymous authentication for simplicity
+4. **Serverless Architecture**: Uses a **single Azure Function, integrated with Azure Static Web Apps,** for backend processing.
+   - Event-driven, scalable compute provided by SWA's managed functions environment.
+   - Pay-per-execution model for cost efficiency.
+   - Stateless function that can scale independently.
+   - Single HTTP-triggered function serves all backend API needs.
+   - Anonymous authentication for the API endpoint.
 
-5. **Cloud Storage**: Uses Azure Blob Storage for image files
-   - Secure access via SAS tokens with time-limited validity
-   - Separate containers for input and output images
-   - Scalable storage for varying workloads
-   - Direct upload from browser to blob storage
+5. **Cloud Storage**: Uses Azure Blob Storage for image files.
+   - Secure access for uploads via function-generated SAS tokens (using storage account connection string).
+   - Two main containers:
+     - `uploads`: Private container for client image uploads (SAS token access).
+     - `downloads`: Publicly readable container (Blob-level access) for processed images, allowing direct URL access.
+   - Scalable storage for varying workloads.
+   - Direct upload from browser to the `uploads` container using SAS tokens.
 
-6. **API Communication**: Frontend communicates with backend via fetch API
+6. **API Communication**: Frontend communicates with the single backend Azure Function via fetch API.
    - BlobService.js handles all API interactions
    - Error handling with detailed error messages
    - Asynchronous operations with Promises
@@ -70,17 +72,11 @@ LogoCraftWeb is built as a React-based web application with a clear separation b
    - Configurable dimensions for different output formats
 
 ## Architecture patterns
-1. **Dual-Mode Authentication**: The application supports two authentication modes:
-   - **Production Mode**: Uses Azure Managed Identity for secure, key-free authentication to Azure Storage
-     - System-assigned Managed Identity for the Function App
-     - RBAC roles (Storage Blob Data Contributor & Storage Blob Delegator)
-     - DefaultAzureCredential for acquiring tokens
-     - User delegation keys for generating SAS tokens
-   - **Local Development Mode**: Uses Storage Account Key stored in local settings
-     - StorageSharedKeyCredential for generating SAS tokens
-     - Connection strings for creating BlobServiceClient
-     - Environment detection to determine the correct mode
-     - Fallback mechanisms for authentication
+1. **SAS Token Authentication (Function-Generated)**:
+   - The backend Azure Function generates SAS tokens for client-side uploads to the `uploads` Azure Blob Storage container.
+   - The function uses the Azure Storage Account connection string (stored as an application setting in Azure Static Web Apps) to create these SAS tokens.
+   - This simplifies the initial authentication setup, deferring Managed Identity.
+   - Local development uses the same connection string (e.g., from `local.settings.json` when using Azure Functions Core Tools, or SWA CLI local emulation).
 
 2. **Three-Step Workflow**: The application follows a clear three-step process:
    - Upload: Select and upload an image
@@ -101,12 +97,11 @@ LogoCraftWeb is built as a React-based web application with a clear separation b
    - On smaller screens, the layout shifts to a more vertical orientation
    - CSS media queries handle different viewport sizes
 
-6. **Microservices Pattern**: Backend functionality is divided into focused, single-purpose functions
-   - GetSasToken: Handles authentication and authorization for blob storage
-   - ProcessImage: Focuses on image transformation and processing
-   - Each function can be deployed, scaled, and maintained independently
+6. **Simplified API Endpoint**: Backend functionality is consolidated into a single Azure Function.
+   - This function handles distinct actions (e.g., SAS generation, image processing) based on request parameters.
+   - While not a microservices pattern, it maintains a clear API contract for the frontend.
 
-7. **API-First Design**: Clear separation between frontend and backend
+7. **API-First Design**: Clear separation between frontend (Azure Static Web App) and backend (integrated Azure Function).
    - RESTful API endpoints for all backend operations
    - Frontend communicates with backend exclusively through these APIs
    - Enables independent development and testing of frontend and backend components

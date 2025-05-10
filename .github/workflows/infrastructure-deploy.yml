@@ -1,4 +1,4 @@
-name: Deploy Azure Infrastructure
+name: Deploy Azure Infrastructure (Simplified)
 
 on:
   push:
@@ -6,6 +6,10 @@ on:
     paths:
       - 'infrastructure/**'
   workflow_dispatch:
+
+env:
+  RESOURCE_GROUP_NAME: 'LogoCraftRG' # Single Resource Group
+  LOCATION: 'eastus' # Define default location, can be overridden by parameter
 
 jobs:
   deploy-infrastructure:
@@ -20,46 +24,34 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
     
-    - name: Deploy Web Resource Group
+    - name: Create Resource Group
       uses: azure/cli@v1
       with:
         inlineScript: |
-          az group create --name LogoCraft-Web-RG --location centralus
+          az group create --name ${{ env.RESOURCE_GROUP_NAME }} --location ${{ env.LOCATION }}
     
-    - name: Deploy Function Resource Group
-      uses: azure/cli@v1
-      with:
-        inlineScript: |
-          az group create --name LogoCraft-Func-RG --location centralus
-    
-    - name: Deploy main infrastructure
+    - name: Deploy Simplified Infrastructure (main.bicep)
       uses: azure/arm-deploy@v1
       with:
-        deploymentName: github-${{ github.run_number }}
+        deploymentName: github-swa-${{ github.run_number }}
         scope: resourcegroup
-        resourceGroupName: 'LogoCraft-Web-RG'
+        resourceGroupName: ${{ env.RESOURCE_GROUP_NAME }}
         template: ./infrastructure/main.bicep
-        parameters: 'namePrefix=logocraftweb functionAppName=logocraftfunc-app webAppRuntimeVersion=20'
-    
-    - name: Get outputs from main deployment
-      id: mainDeploy
-      run: |
-        STORAGE_ACCOUNT_NAME=$(az deployment group show --resource-group 'LogoCraft-Web-RG' --name github-${{ github.run_number }} --query properties.outputs.storageAccountName.value -o tsv)
-        APP_INSIGHTS_CONNECTION_STRING=$(az deployment group show --resource-group 'LogoCraft-Web-RG' --name github-${{ github.run_number }} --query properties.outputs.appInsightsConnectionString.value -o tsv)
-        
-        echo "storageAccountName=$STORAGE_ACCOUNT_NAME" >> $GITHUB_OUTPUT
-        echo "appInsightsConnectionString=$APP_INSIGHTS_CONNECTION_STRING" >> $GITHUB_OUTPUT
-    
-    - name: Deploy Function App infrastructure
-      uses: azure/arm-deploy@v1
-      with:
-        deploymentName: github-func-${{ github.run_number }}
-        scope: resourcegroup
-        resourceGroupName: 'LogoCraft-Func-RG'
-        template: ./infrastructure/function.bicep
         parameters: >
-          namePrefix=logocraftfunc
-          functionAppRuntimeVersion=20
-          storageAccountName=${{ steps.mainDeploy.outputs.storageAccountName }}
-          webAppName=logocraftweb-app
-          appInsightsConnectionString='${{ steps.mainDeploy.outputs.appInsightsConnectionString }}'
+          location=${{ env.LOCATION }}
+          namePrefix=logocraft
+          # staticWebAppName, staticWebAppSkuName, storageAccountName use defaults from main.bicep if not provided
+          # Or they can be explicitly passed here if needed:
+          # staticWebAppName=logocraftswa${{ github.run_number }} 
+          # storageAccountName=logocraftst${{ github.run_number }}
+
+    # Optional: Get outputs from the deployment if needed by other jobs or for notification
+    - name: Get outputs from deployment
+      id: mainDeployOutput
+      if: always() # Run even if previous steps fail, to capture output or error
+      run: |
+        DEPLOYMENT_OUTPUTS=$(az deployment group show --resource-group ${{ env.RESOURCE_GROUP_NAME }} --name github-swa-${{ github.run_number }} --query properties.outputs -o json)
+        echo "Deployment outputs: $DEPLOYMENT_OUTPUTS"
+        # Example to set a specific output:
+        # SWA_HOSTNAME=$(echo $DEPLOYMENT_OUTPUTS | jq -r '.staticWebAppDefaultHostName.value')
+        # echo "staticWebAppDefaultHostName=$SWA_HOSTNAME" >> $GITHUB_OUTPUT

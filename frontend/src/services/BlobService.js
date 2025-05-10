@@ -1,61 +1,49 @@
 // frontend/src/services/BlobService.js
 import axios from 'axios';
 
+const API_BASE_URL = '/api/ProcessImage'; // Consolidated function endpoint
+
 /**
- * Get SAS URL for uploading a specific file
- * @param {string} filename
- * @param {string} containerName - Container name (default: 'input-images')
- * @param {string} accessType - 'read' or 'write' (default: 'write')
- * @returns {Promise<string>} Signed URL to upload blob
+ * Upload file to Azure Blob Storage.
+ * This function first gets an upload SAS URL from our backend,
+ * then uploads the file directly to Azure Blob Storage.
+ * @param {File} file - File object to upload.
+ * @param {string} desiredFilename - The desired filename for the blob.
+ * @returns {Promise<string>} - The blobName of the uploaded file in the 'uploads' container.
  */
-const getSasUrl = async (filename, containerName = 'input-images', accessType = 'write') => {
+export const uploadFileToBlob = async (file, desiredFilename) => {
   try {
-    // Use local API proxy instead of calling Function App directly
-    const response = await fetch(`/api/GetSasToken?container=${encodeURIComponent(containerName)}&filename=${encodeURIComponent(filename)}&accessType=${accessType}`);
+    console.log(`Requesting SAS URL for file: ${desiredFilename}`);
+    // Request SAS URL from our consolidated function
+    const sasResponse = await fetch(`${API_BASE_URL}?action=getUploadSas&filename=${encodeURIComponent(desiredFilename)}`);
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('SAS token fetch failed:', errorText);
-      throw new Error(`Failed to get SAS token: ${errorText}`);
+    if (!sasResponse.ok) {
+      const errorText = await sasResponse.text();
+      console.error('Failed to get SAS URL:', errorText);
+      throw new Error(`Failed to get SAS URL: ${errorText}`);
     }
     
-    const data = await response.json();
-    console.log(`SAS token for ${accessType} access retrieved successfully`);
-    return data.blobUrlWithSas;
-  } catch (error) {
-    console.error('Error getting SAS URL:', error);
-    throw error;
-  }
-};
+    const { uploadUrl, blobName } = await sasResponse.json();
+    console.log(`SAS URL retrieved. Uploading ${desiredFilename} as ${blobName} to: ${uploadUrl.split('?')[0]}`);
 
-/**
- * Upload file to Azure Blob Storage using SAS URL
- * @param {File} file - File object
- * @param {string} filename - Name for the blob
- * @returns {Promise<string>} - URL to uploaded blob
- */
-export const uploadFileToBlob = async (file, filename) => {
-  try {
-    console.log(`Starting upload for file: ${filename}`);
-    const sasUrl = await getSasUrl(filename, 'input-images', 'write');
-
-    // Upload the file
-    await axios.put(sasUrl, file, {
+    // Upload the file to the SAS URL
+    await axios.put(uploadUrl, file, {
       headers: {
-        'x-ms-blob-type': 'BlockBlob',
+        'x-ms-blob-type': 'BlockBlob', // Required for block blobs
         'Content-Type': file.type
       },
       onUploadProgress: (progressEvent) => {
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        console.log(`Upload progress: ${percentCompleted}%`);
+        if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            console.log(`Upload progress for ${blobName}: ${percentCompleted}%`);
+        } else {
+            console.log(`Upload progress for ${blobName}: ${progressEvent.loaded} bytes`);
+        }
       }
     });
 
-    console.log('File uploaded successfully');
-    
-    // Return the blob URL without the SAS token
-    const blobUrl = sasUrl.split('?')[0];
-    return blobUrl;
+    console.log(`File ${blobName} uploaded successfully to uploads container.`);
+    return blobName; // Return the actual blob name used (which was confirmed by the SAS generation)
   } catch (error) {
     console.error('Error uploading file:', error);
     throw error;
@@ -63,57 +51,36 @@ export const uploadFileToBlob = async (file, filename) => {
 };
 
 /**
- * Trigger backend image processing
- * @param {string} sourceUrl - URL of the uploaded blob
- * @param {object} formats - Object with format names as keys and boolean values
- * @returns {Promise<object>}
+ * Trigger backend image processing.
+ * @param {string} sourceBlobName - Name of the uploaded blob in the 'uploads' container.
+ * @param {object} formats - Object with format names as keys and boolean values (true if selected).
+ * @returns {Promise<object>} - Object containing an array of processed image metadata (name, public URL, dimensions).
  */
-export const processImage = async (sourceUrl, formats) => {
+export const processImage = async (sourceBlobName, formats) => {
   try {
-    console.log('Processing image with formats:', Object.keys(formats).filter(key => formats[key]));
+    console.log(`Requesting processing for blob: ${sourceBlobName} with formats:`, Object.keys(formats).filter(key => formats[key]));
     
-    // Use local API proxy instead of calling Function App directly
-    const response = await fetch('/api/ProcessImage', {
+    const response = await fetch(`${API_BASE_URL}?action=processImage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sourceUrl, formats }) 
+      body: JSON.stringify({ sourceBlobName, formats }) 
     });
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error('Image processing request failed:', errorText);
       throw new Error(`Processing failed: ${errorText}`);
     }
 
     const result = await response.json();
-    console.log('Processing completed successfully');
+    console.log('Processing completed successfully by backend.');
     
-    // Add SAS tokens to URLs if needed
-    if (result.processedImages && result.processedImages.length > 0) {
-      // Get SAS tokens for each processed image
-      const processedImagesWithSas = await Promise.all(
-        result.processedImages.map(async (image) => {
-          try {
-            // If url doesn't have SAS token, add one
-            if (!image.url.includes('?')) {
-              const imgUrlObj = new URL(image.url);
-              const pathParts = imgUrlObj.pathname.split('/');
-              const blobName = pathParts[pathParts.length - 1];
-              const containerName = pathParts[pathParts.length - 2];
-              
-              const sasUrl = await getSasUrl(blobName, containerName, 'read');
-              return {
-                ...image,
-                url: sasUrl
-              };
-            }
-            return image;
-          } catch (error) {
-            console.error(`Error getting SAS token for image ${image.name}:`, error);
-            return image; // Return original image if failed to get SAS
-          }
-        })
-      );
-      result.processedImages = processedImagesWithSas;
+    // The backend should now return direct public URLs for images in the 'downloads' container
+    // No need to fetch SAS tokens for processed images here.
+    if (result.processedImages) {
+        result.processedImages.forEach(img => {
+            console.log(`Processed image: ${img.name}, URL: ${img.url}`);
+        });
     }
     
     return result;
@@ -124,18 +91,19 @@ export const processImage = async (sourceUrl, formats) => {
 };
 
 /**
- * Fetches the content of a processed image from its URL (presumably with SAS).
- * @param {string} imageUrlWithSas - The URL of the image to fetch.
+ * Fetches the content of a processed image from its public URL.
+ * @param {string} imageUrl - The public URL of the image to fetch.
  * @returns {Promise<Blob>} The image data as a Blob.
  */
-export const getProcessedImage = async (imageUrlWithSas) => {
+export const getProcessedImage = async (imageUrl) => {
   try {
-    const response = await axios.get(imageUrlWithSas, {
+    console.log(`Fetching processed image from: ${imageUrl}`);
+    const response = await axios.get(imageUrl, {
       responseType: 'blob' // Important to get the raw blob data
     });
     return response.data;
   } catch (error) {
-    console.error(`Error fetching processed image from ${imageUrlWithSas}:`, error);
+    console.error(`Error fetching processed image from ${imageUrl}:`, error);
     throw error;
   }
 };

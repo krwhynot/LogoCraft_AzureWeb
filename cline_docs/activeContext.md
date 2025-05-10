@@ -1,65 +1,63 @@
 # Active Context
 
 ## What you're working on now
-Implementing Azure Managed Identity authentication for LogoCraftWeb's Azure Functions to eliminate the need for storage account keys in production while maintaining local development capabilities.
+Refactoring LogoCraftWeb for a **Simplified Azure Implementation**. This involves:
+- Consolidating backend logic into a single Azure Function.
+- Switching to Azure Static Web Apps for frontend hosting with integrated functions.
+- Simplifying authentication to use function-generated SAS tokens (via storage account connection string) instead of Managed Identity for the initial deployment.
+- Updating Bicep templates and GitHub Actions workflows to support this new architecture.
+- Updating all relevant memory bank documentation.
 
-## Recent changes
-1. Successfully migrated to Azure Managed Identity authentication:
-   - Modified GetSasToken function to:
-     - Use StorageSharedKeyCredential for local development
-     - Use Managed Identity (DefaultAzureCredential) in production
-     - Add proper error handling and logging
-   - Updated ProcessImage function to:
-     - Use connection string approach for local development 
-     - Use Managed Identity for production
-     - Add fallback mechanisms between authentication methods
-   - Updated local configuration:
-     - Added storage account key to local.settings.json
-     - Configured CORS in Azure Storage account to allow localhost requests
-     - Added role assignments (Storage Blob Data Contributor & Delegator)
+## Recent changes (Current Simplification Task)
+1.  **Backend Azure Function (`api/ProcessImage/index.js`):**
+    *   Consolidated `GetSasToken` and `ProcessImage` functionalities into a single function.
+    *   Modified to use Azure Storage connection string for SAS token generation and blob access.
+    *   Removed Managed Identity specific code (e.g., `DefaultAzureCredential`).
+    *   Updated `function.json` to accept GET and POST methods.
+    *   Deleted the old `api/GetSasToken/` directory.
 
-2. Previous Azure Functions restructuring (completed earlier):
-   - Moved function folders from `api/src/functions/` to directly under `api/`
-   - Created proper function folders at the root level:
-     - `api/GetSasToken/`
-     - `api/ProcessImage/`
-   - Removed the nested `src` directory
-   - Ensured each function folder contains:
-     - `function.json` with correct HTTP trigger bindings
-     - `index.js` with proper module.exports format
-   - Verified `host.json` has the correct version (2.0)
-   - Confirmed `package.json` doesn't have isolated worker dependencies
+2.  **Frontend Service (`frontend/src/services/BlobService.js`):**
+    *   Updated to interact with the single consolidated backend Azure Function for both SAS token retrieval and image processing requests.
+    *   Removed direct calls to a separate `GetSasToken` endpoint.
 
-3. Previous UI work (completed earlier):
-   - Modified the layout structure in App.jsx:
-     - Reorganized the panels from a vertical stack to a more horizontal arrangement
-     - Created a two-row layout with panels distributed more evenly
-     - Added appropriate Bootstrap classes for responsive behavior
-     - Centered the entire layout with margins on the left and right sides
-   - Updated App.css:
-     - Adjusted panel heights and spacing
-     - Modified the content wrapper to remove height limitations
-     - Added new CSS classes for the horizontal layout
-     - Updated responsive breakpoints for different screen sizes
+3.  **Infrastructure as Code (`infrastructure/main.bicep`):**
+    *   Rewritten to define an Azure Static Web App resource and the main Application Storage Account.
+    *   Configured SWA for integrated functions from the `/api` directory.
+    *   Set SWA application settings to include `AZURE_STORAGE_CONNECTION_STRING`.
+    *   Configured storage containers (`uploads` private, `downloads` public blob).
+    *   Removed definitions for separate App Service, App Service Plan, Key Vault, and standalone Function App.
+    *   Deleted the old `infrastructure/function.bicep`.
+
+4.  **GitHub Actions Workflows (`.github/workflows/`):**
+    *   Updated `web-app-deploy.yml` to deploy to Azure Static Web Apps (including the API from `/api`).
+    *   Updated `infrastructure-deploy.yml` to deploy the simplified `main.bicep` to a single resource group.
+    *   Deleted the redundant `function-app-deploy.yml`.
+
+5.  **File Cleanup:**
+    *   Deleted `frontend/server.js`.
+
+6.  **Memory Bank Documentation (`cline_docs/`):**
+    *   Created `projectbrief.md` for the simplified architecture.
+    *   Updated `systemPatterns.md` to reflect SWA, single function, and SAS token auth.
+    *   Updated `techContext.md` for simplified auth and deployment.
+    *   Updated `progress.md` to reflect current status and goals.
+    *   This file (`activeContext.md`) is being updated now.
 
 ## Next steps
-1. Validate architectural understanding and plan any necessary refinements:
-   - Review the updated systemPatterns.md for accuracy and completeness
-   - Identify any architectural improvements that could be made
-   - Consider documenting any potential technical debt or areas for improvement
+1.  **Finalize Documentation Updates:**
+    *   Review and update `cline_docs/azure-architecture-template.md` to align with the implemented simplified architecture.
 
-2. Deploy the fixed Azure Functions to Azure:
-   - Right-click on the project root (api folder)
-   - Select "Deploy to Function App"
-   - Choose subscription and Function App
-   - Verify functions appear in Azure Portal
+2.  **Deployment and Testing:**
+    *   Ensure the `AZURE_STATIC_WEB_APPS_API_TOKEN` secret is configured in the GitHub repository for the `web-app-deploy.yml` workflow.
+    *   Ensure `AZURE_CREDENTIALS` secret is configured for the `infrastructure-deploy.yml` workflow.
+    *   Trigger the `infrastructure-deploy.yml` workflow to provision/update Azure resources.
+    *   Trigger the `web-app-deploy.yml` workflow to deploy the application (frontend and API) to Azure Static Web Apps.
+    *   Thoroughly test the end-to-end application flow:
+        *   Image upload (SAS token generation and use).
+        *   Image processing.
+        *   Display and download of processed images.
+    *   Verify Azure Function logs and SWA configuration in the Azure portal.
 
-3. Connect the frontend to the deployed Azure Functions:
-   - Update the BlobService.js to use the actual Azure Function endpoints
-   - Test the image upload and processing functionality
-   - Implement error handling for API calls
-
-4. Further backend development:
-   - Implement additional error handling in the Azure Functions
-   - Add logging for better troubleshooting
-   - Consider adding authentication to the API endpoints
+3.  **Post-Deployment Review & Iteration:**
+    *   Address any issues found during testing.
+    *   Consider next enhancements as outlined in the updated `progress.md` (e.g., re-evaluating Managed Identity, UI improvements).

@@ -28,51 +28,49 @@
    - Node.js with JavaScript
    - Sharp library for image processing
    - Azure Storage SDK (@azure/storage-blob)
-   - Azure Identity SDK (@azure/identity)
-   - SAS token authentication for blob storage
-   - Azure Managed Identity for secure, key-free authentication
+   - Azure Identity SDK (@azure/identity) - (No longer primary for auth in this simplified version)
+   - Function-generated SAS token authentication for blob storage (using connection strings).
 
 ## Development setup
 1. **Project Structure**:
-   - `/frontend`: Contains the React application
+   - `/frontend`: Contains the React application (deployed to Azure Static Web Apps).
      - `/src`: Source code
        - `/components`: React components
        - `/services`: Service modules for API interactions
        - `/assets`: Static assets like images
      - `/public`: Public static files
-     - `vite.config.js`: Vite configuration including API proxy settings
-     - `package.json`: Frontend dependencies
-   - `/api`: Azure Functions implementation
-     - `/GetSasToken`: Function for generating SAS tokens for blob storage
-       - `function.json`: Function bindings configuration
-       - `index.js`: Function implementation
-     - `/ProcessImage`: Function for image processing
-       - `function.json`: Function bindings configuration
-       - `index.js`: Function implementation
-     - `host.json`: Azure Functions host configuration
-     - `package.json`: Node.js dependencies
-   - `/infrastructure`: Placeholder for deployment and infrastructure code
-   - `/cline_docs`: Documentation for the project
+     - `vite.config.js`: Vite configuration including API proxy settings for local development.
+     - `package.json`: Frontend dependencies.
+   - `/api`: Contains the single Azure Function (integrated with Azure Static Web Apps).
+     - `/ProcessImage` (or similar consolidated name): Single function for SAS generation and image processing.
+       - `function.json`: Function bindings configuration.
+       - `index.js`: Function implementation.
+     - `host.json`: Azure Functions host configuration (relevant for local testing and SWA).
+     - `package.json`: Node.js dependencies for the function.
+   - `/infrastructure`: Contains Bicep templates for Azure resources (SWA, Storage Account).
+   - `/cline_docs`: Project documentation.
+   - `.github/workflows`: GitHub Actions for CI/CD.
 
 2. **Build System**:
-   - Vite for frontend development and optimized production builds
-   - Azure Functions Core Tools for local function development
+   - Vite for frontend development and optimized production builds (output to `frontend/dist`).
+   - Azure Functions Core Tools for local function development and testing (or SWA CLI for local emulation).
    - NPM for package management
    - ESLint for code linting
 
 3. **Development Workflow**:
-   - Local development server with hot module replacement for frontend
-   - Azure Functions local runtime for backend testing
-   - VS Code Azure Functions extension for deployment
-   - Proxy configuration in Vite to route API requests during development
-   - Dual-mode authentication:
-     - Local: Storage Account Key in local.settings.json
-     - Production: Azure Managed Identity
+   - Local development server (Vite) with hot module replacement for frontend.
+   - Local Azure Functions runtime (Azure Functions Core Tools or SWA CLI) for backend testing.
+   - Azure Static Web Apps GitHub Action for CI/CD.
+   - Proxy configuration in Vite to route `/api/*` requests during local development.
+   - Authentication: Uses Azure Storage connection string for SAS token generation in both local (via `local.settings.json` or SWA CLI config) and deployed environments (via SWA app settings).
 
 4. **Deployment**:
-   - Frontend: Static site hosting (not yet configured)
-   - Backend: Azure Functions deployment
-   - Storage: Azure Blob Storage with containers for input and output images
+   - **Frontend & Backend API**: Deployed together via Azure Static Web Apps GitHub Action.
+     - Frontend source: `/frontend`
+     - API source: `/api`
+     - Frontend build output: `frontend/dist`
+   - **Infrastructure**: Deployed via GitHub Actions using Bicep templates (`/infrastructure/main.bicep`).
+   - **Storage**: Azure Blob Storage with `uploads` and `downloads` containers.
 
 ## Technical constraints
 1. **Browser Compatibility**:
@@ -81,47 +79,46 @@
 
 2. **Performance Considerations**:
    - Image processing is resource-intensive
-   - Azure Functions consumption plan has execution time limits
-   - Blob storage operations may have latency
-   - UI should remain responsive during processing operations
-   - Large images may require additional processing time
+   - Azure Functions (managed by SWA) have execution time limits.
+   - Blob storage operations may have latency.
+   - UI should remain responsive during processing operations.
+   - Large images may require additional processing time.
 
-3. **Azure Functions Requirements**:
-   - Function folders must be directly under the project root
-   - Each function folder must contain function.json and index.js
-   - host.json must be in the project root with version 2.0
-   - Proper HTTP trigger bindings required for web API endpoints
-   - Anonymous authentication used for API endpoints
-   - Managed Identity for secure Azure Storage authentication
-   - System-assigned Managed Identity for Function App
-   - RBAC roles (Storage Blob Data Contributor, Storage Blob Delegator)
+3. **Azure Functions (Integrated with SWA) Requirements**:
+   - The function code resides in the folder specified as `api_location` (e.g., `/api`).
+   - Each function within that folder (here, one consolidated function) must have its `function.json` and `index.js`.
+   - `host.json` in the `api_location` root is used.
+   - Proper HTTP trigger bindings required.
+   - Anonymous authentication used for API endpoints.
+   - Azure Storage access via connection string stored in SWA application settings.
 
 4. **Limitations**:
-   - Maximum image size: 20MB (as indicated in the UI)
+   - Maximum image size: 20MB (as indicated in the UI).
    - Supported image formats: PNG, JPEG, GIF, BMP, TIFF, WebP
    - Currently no user authentication or persistent storage
-   - SAS tokens have a 1-hour validity period
-   - Predefined output formats with fixed dimensions
+   - SAS tokens generated by the function have a 1-hour validity period.
+   - Predefined output formats with fixed dimensions.
 
 5. **API Endpoints**:
-   - `/api/GetSasToken`: GET endpoint for generating SAS tokens
-     - Optional query parameter: `container` (defaults to 'input-images')
-     - Returns: SAS token and container URL
-   - `/api/ProcessImage`: POST endpoint for processing images
-     - Request body: JSON with `sourceUrl` and `formats` properties
-     - Returns: Array of processed image URLs and metadata
+   - `/api/ProcessImage` (or similar, e.g., `/api/ImageProcessor` if function folder is named that):
+     - **GET** with `?action=getUploadSas&filename=<filename>`: For generating SAS tokens for uploads.
+       - Returns: `{ uploadUrl: string, blobName: string }`
+     - **POST** with `?action=processImage`: For processing images.
+       - Request body: JSON with `{ sourceBlobName: string, formats: object }`
+       - Returns: `{ processedImages: Array<{ name: string, url: string, size: string, dimensions: object }> }` (URLs are direct public links to 'downloads' container).
 
 6. **Error Handling**:
-   - Frontend: Try/catch blocks with error messages displayed to user
+   - Frontend: Try/catch blocks with error messages displayed to user.
    - Backend: Try/catch with structured error responses
    - HTTP status codes for different error types
    - Detailed error messages for debugging
 
 7. **Data Flow**:
    - User uploads image to browser
-   - Frontend gets SAS token from Azure Function
-   - Frontend uploads image directly to Azure Blob Storage
-   - Frontend sends processing request to Azure Function
-   - Backend processes image and stores results in output container
-   - Frontend downloads processed images and creates ZIP file
-   - ZIP file is offered for download to user
+   - Frontend calls Azure Function with `action=getUploadSas` to get an upload SAS URL and blob name.
+   - Frontend uploads image directly to Azure Blob Storage (`uploads` container) using the SAS URL.
+   - Frontend calls Azure Function with `action=processImage` and the `sourceBlobName`.
+   - Backend Azure Function processes the image, stores results in the `downloads` container.
+   - Backend returns direct public URLs for processed images.
+   - Frontend downloads processed images (e.g., for zipping) using these public URLs.
+   - ZIP file is offered for download to user.
