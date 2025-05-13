@@ -104,17 +104,23 @@ resource swaAppSettings 'Microsoft.Web/staticSites/config@2023-01-01' = {
   parent: staticWebApp
   name: 'appsettings'
   properties: {
-    // Connection string for the Azure Function to access the main storage account
-    'AZURE_STORAGE_CONNECTION_STRING': listKeys(mainStorageAccount.id, mainStorageAccount.apiVersion).keys[0].value
-    'AzureWebJobsStorage': listKeys(mainStorageAccount.id, mainStorageAccount.apiVersion).keys[0].value // SWA managed functions might use this too
-    'APPLICATIONINSIGHTS_CONNECTION_STRING': appInsights.properties.ConnectionString
-    // Add other necessary environment variables for your functions here
-    // 'STORAGE_ACCOUNT_NAME': mainStorageAccount.name // Already part of connection string, but can be explicit
+    AZURE_STORAGE_CONNECTION_STRING: mainStorageAccount.listKeys().keys[0].value
+    AzureWebJobsStorage: mainStorageAccount.listKeys().keys[0].value
+    APPLICATIONINSIGHTS_CONNECTION_STRING: appInsights.properties.ConnectionString
   }
 }
 
-// Outputs
+
 output staticWebAppDefaultHostName string = staticWebApp.properties.defaultHostname
 output staticWebAppId string = staticWebApp.id
 output storageAccount_Name string = mainStorageAccount.name // Renamed for clarity
 output appInsights_ConnectionString string = appInsights.properties.ConnectionString // Renamed for clarity
+
+
+
+
+
+
+
+
+
