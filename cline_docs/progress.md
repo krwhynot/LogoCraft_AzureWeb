@@ -31,6 +31,7 @@
    - Uses Azure Storage connection string for SAS token generation and blob access.
    - Dependencies (Sharp, Azure Storage SDK) remain relevant. Azure Identity SDK is not used for auth in this version.
    - Error handling and local development support (via connection string in `local.settings.json` or SWA CLI) maintained.
+   - **Successfully tested end-to-end locally** using SWA CLI and Azurite (upload, SAS generation, processing, result storage).
 
 5. **Documentation (Updated for Simplification)**:
    - New `projectbrief.md` created for the simplified architecture.
@@ -73,7 +74,8 @@
     - Infrastructure deployment workflow updated (100% for this refactor).
     - Unneeded workflows deleted.
 - **Security Model**: Shifted to function-generated SAS (via connection string) for initial simplicity.
-- **Deployment**: Pending first deployment of the simplified architecture.
+- **Local End-to-End Testing**: Successfully completed with SWA CLI and Azurite.
+- **Deployment**: Pending first deployment of the simplified architecture to Azure.
 - **Documentation**: Updated for simplified architecture (project brief created, system patterns, tech context, progress updated).
 
-Current focus: Completing the refactoring for a simplified Azure Static Web App architecture with an integrated function using SAS token (via connection string) authentication. Next steps involve deploying this simplified architecture and conducting end-to-end testing.
+Current focus: Local testing of the simplified Azure Static Web App architecture (with integrated function using SAS token via connection string) has been **successfully completed**. Next steps involve deploying this simplified architecture to Azure and conducting end-to-end testing in the cloud environment.

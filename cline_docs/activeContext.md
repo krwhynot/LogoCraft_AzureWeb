@@ -40,24 +40,35 @@ Refactoring LogoCraftWeb for a **Simplified Azure Implementation**. This involve
     *   Created `projectbrief.md` for the simplified architecture.
     *   Updated `systemPatterns.md` to reflect SWA, single function, and SAS token auth.
     *   Updated `techContext.md` for simplified auth and deployment.
-    *   Updated `progress.md` to reflect current status and goals.
+    *   Updated `progress.md` to reflect current status, goals, and successful local testing.
+    *   Updated `azure-architecture-template.md` to align with the implemented simplified architecture.
     *   This file (`activeContext.md`) is being updated now.
 
+7.  **Local End-to-End Testing:**
+    *   Successfully tested the refactored application (frontend and single backend function) locally using SWA CLI and Azurite. This included SAS generation, file upload, image processing, and result storage.
+    *   Resolved CORS issue for Azurite and protocol mismatch for SAS token generation.
+
 ## Next steps
-1.  **Finalize Documentation Updates:**
-    *   Review and update `cline_docs/azure-architecture-template.md` to align with the implemented simplified architecture.
+1.  **Prepare for Azure Deployment:**
+    *   **Verify GitHub Secrets:** Ensure `AZURE_CREDENTIALS` (for infrastructure deployment) and `AZURE_STATIC_WEB_APPS_API_TOKEN` (for SWA application deployment) are correctly configured in the GitHub repository secrets.
+    *   **Review Bicep Parameters:** Confirm default parameters in `infrastructure/main.bicep` (like `location`, `namePrefix`) are suitable for the intended Azure deployment, or plan to override them in the `infrastructure-deploy.yml` workflow if needed.
 
-2.  **Deployment and Testing:**
-    *   Ensure the `AZURE_STATIC_WEB_APPS_API_TOKEN` secret is configured in the GitHub repository for the `web-app-deploy.yml` workflow.
-    *   Ensure `AZURE_CREDENTIALS` secret is configured for the `infrastructure-deploy.yml` workflow.
-    *   Trigger the `infrastructure-deploy.yml` workflow to provision/update Azure resources.
-    *   Trigger the `web-app-deploy.yml` workflow to deploy the application (frontend and API) to Azure Static Web Apps.
-    *   Thoroughly test the end-to-end application flow:
-        *   Image upload (SAS token generation and use).
-        *   Image processing.
-        *   Display and download of processed images.
-    *   Verify Azure Function logs and SWA configuration in the Azure portal.
+2.  **Deploy Infrastructure to Azure:**
+    *   Trigger the `.github/workflows/infrastructure-deploy.yml` workflow (e.g., by pushing a commit to the `main` branch that touches the `infrastructure/` folder, or by manual dispatch if configured).
+    *   Monitor the workflow run in GitHub Actions for successful completion.
+    *   Verify in the Azure portal that the Resource Group, Storage Account (with `uploads` and `downloads` containers correctly configured), Static Web App, and Application Insights resources are created.
 
-3.  **Post-Deployment Review & Iteration:**
-    *   Address any issues found during testing.
+3.  **Deploy Application to Azure Static Web App:**
+    *   Trigger the `.github/workflows/web-app-deploy.yml` workflow (e.g., by pushing a commit to `main` that touches `frontend/` or `api/`, or by manual dispatch).
+    *   Monitor the workflow run in GitHub Actions. This will build the frontend, package the API, and deploy them to the SWA resource created in the previous step.
+    *   Verify SWA application settings (especially `AZURE_STORAGE_CONNECTION_STRING`) are correctly populated in the Azure portal for the SWA resource.
+
+4.  **End-to-End Testing in Azure:**
+    *   Access the deployed application using the URL provided by Azure Static Web Apps.
+    *   Thoroughly test the complete application flow: image upload, processing, and download.
+    *   Check Azure Function logs (via Application Insights or SWA monitoring) for any runtime errors.
+    *   Verify files are correctly stored in the Azure Blob Storage containers.
+
+5.  **Post-Deployment Review & Iteration:**
+    *   Address any issues found during Azure testing.
     *   Consider next enhancements as outlined in the updated `progress.md` (e.g., re-evaluating Managed Identity, UI improvements).

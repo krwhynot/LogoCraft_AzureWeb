@@ -43,10 +43,10 @@ module.exports = async function (context, req) {
                 permissions: permissions,
                 startsOn: startsOn, // Optional: Starts immediately by default
                 expiresOn: expiresOn,
-                protocol: SASProtocol.Https // Enforce HTTPS
+                protocol: SASProtocol.HttpHttps // Allow both HTTP and HTTPS for local Azurite flexibility
             });
 
-            context.log(`Successfully generated SAS URL for upload to ${containerName}/${blobName}`);
+            context.log(`Successfully generated SAS URL (HTTP/HTTPS) for upload to ${containerName}/${blobName}`);
             context.res = {
                 status: 200,
                 body: {
