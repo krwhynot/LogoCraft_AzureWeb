@@ -1,5 +1,5 @@
 @description('Location for all resources.')
-param location string = resourceGroup().location
+param location string = 'centralus'
 
 @description('Prefix for resource names.')
 param namePrefix string = 'logocraft' // Simplified prefix
