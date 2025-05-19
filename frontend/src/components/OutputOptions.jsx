@@ -12,7 +12,7 @@ const OutputOptions = ({ selectedFormats, setSelectedFormats, disabled }) => {
         { id: 'Smalllogo.png', label: 'Small Logo PNG (136×136)', tooltip: 'Compact size for thumbnails, app icons, and mobile applications'},
         { id: 'KDlogo.png', label: 'KD Logo PNG (140×112)', tooltip: 'Slightly rectangular format optimized for UI elements and sidebar navigation'},
         { id: 'RPTlogo.bmp', label: 'RPT Logo BMP (155×110)', tooltip: 'BMP format for legacy systems and specialized applications'},
-        { id: 'PRINTLOGO.bmp', label: 'Print Logo BMP (Thermal)', tooltip: 'Optimized for thermal printer output at 203 DPI, includes printer-specific adjustments'}
+        { id: 'PRINTLOGO.bmp', label: 'Print Logo BMP (600X256)', tooltip: 'Optimized for thermal printer output at 203 DPI, includes printer-specific adjustments'}
       ]
     },
     {
@@ -119,14 +119,14 @@ const OutputOptions = ({ selectedFormats, setSelectedFormats, disabled }) => {
                   onClick={() => handleSelectGroup(installerFormatKeys, true)}
                   disabled={disabled}
                 >
-                  Select All Installer
+                  Select All
                 </Button>
                 <Button
                   variant="outline-secondary"
                   onClick={() => handleSelectGroup(installerFormatKeys, false)}
                   disabled={disabled}
                 >
-                  Clear Installer
+                  Clear All
                 </Button>
              </ButtonGroup>
           </div>
@@ -140,14 +140,14 @@ const OutputOptions = ({ selectedFormats, setSelectedFormats, disabled }) => {
                   onClick={() => handleSelectGroup(onlineFormatKeys, true)}
                   disabled={disabled}
                 >
-                  Select All Online
+                  Select All
                 </Button>
                 <Button
                   variant="outline-secondary"
                   onClick={() => handleSelectGroup(onlineFormatKeys, false)}
                   disabled={disabled}
                 >
-                  Clear Online
+                  Clear All
                 </Button>
              </ButtonGroup>
           </div>

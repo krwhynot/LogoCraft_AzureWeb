@@ -3,11 +3,11 @@ import React from 'react';
 import { Form, InputGroup, Button, ProgressBar } from 'react-bootstrap';
 import { FolderFill, ArrowRightCircleFill, CloudArrowUp } from 'react-bootstrap-icons';
 
-const ProcessingOptions = ({ 
-  outputDir, 
-  setOutputDir, 
-  onProcess, 
-  isProcessing, 
+const ProcessingOptions = ({
+  outputDir,
+  setOutputDir,
+  onProcess,
+  isProcessing,
   progress,
   disabled
 }) => {
@@ -22,9 +22,10 @@ const ProcessingOptions = ({
           value={outputDir}
           onChange={(e) => setOutputDir(e.target.value)}
           disabled={isProcessing || disabled}
+          style={{ minWidth: "100%", fontSize: "0.8rem" }}
         />
       </InputGroup>
-      
+
       <Button
         variant="primary"
         onClick={onProcess}
@@ -36,24 +37,24 @@ const ProcessingOptions = ({
         ) : (
           <>
             <CloudArrowUp size={20} />
-            Process & Generate Formats
+            Generate Formats
           </>
         )}
       </Button>
-      
+
       {isProcessing && (
         <div className="mt-3">
           <div className="d-flex justify-content-between mb-1">
             <span>Processing...</span>
             <span>{Math.round(progress)}%</span>
           </div>
-          <ProgressBar 
-            now={progress} 
+          <ProgressBar
+            now={progress}
             animated
           />
         </div>
       )}
-      
+
       {!isProcessing && disabled && !outputDir && (
         <div className="mt-3 text-center text-muted small">
           {disabled ? "Upload an image and select formats to continue" : ""}
