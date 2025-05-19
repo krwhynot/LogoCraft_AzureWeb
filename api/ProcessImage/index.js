@@ -221,7 +221,6 @@ module.exports = async function (context, req) {
         },
       };
     }
-  } catch (error) {
     context.log.error(
       `Error in Image Processing Function: ${error.message}`,
       error.stack
@@ -239,15 +238,38 @@ module.exports = async function (context, req) {
 function getFormatDimensions(format, context) {
   // It's good practice to log if a format is not found, or handle it gracefully.
   const dimensions = {
-    "Logo.png": { width: 300, height: 300 },
-    "Smalllogo.png": { width: 136, height: 136 },
-    "KDlogo.png": { width: 140, height: 112 },
-    "RPTlogo.bmp": { width: 155, height: 110 },
-    "PRINTLOGO.bmp": { width: 600, height: 256 },
-    "Feature Graphic.png": { width: 1024, height: 500 },
-    "hpns.png": { width: 96, height: 96 },
-    "loginLogo.png": { width: 600, height: 600 },
-    // 'logo.png' is duplicated, assuming one is a typo or specific context. Keeping one.
+    'Logo.png': { width: 300, height: 300 },
+    'Smalllogo.png': { width: 136, height: 136 },
+    'KDlogo.png': { width: 140, height: 112 },
+    'RPTlogo.bmp': { width: 155, height: 110 },
+    'PRINTLOGO.bmp': { width: 600, height: 256 },
+    'Feature Graphic.png': { width: 1024, height: 500 },
+    'hpns.png': { width: 96, height: 96 },
+    'loginLogo.png': { width: 600, height: 600 },
+    'logo.png': { width: 300, height: 300 },
+    'logo@2x.png': { width: 300, height: 300 },
+    'logo@3x.png': { width: 300, height: 300 },
+    'appicon-60.png': { width: 60, height: 60 },
+    'appicon-60@2x.png': { width: 120, height: 120 },
+    'appicon-60@3x.png': { width: 180, height: 180 },
+    'appicon.png': { width: 57, height: 57 },
+    'appicon-512.png': { width: 512, height: 512 },
+    'appicon@2x.png': { width: 114, height: 114 },
+    'default_app_logo.png': { width: 512, height: 512 },
+    'DefaultIcon.png': { width: 1024, height: 1024 },
+    'default-large.png': { width: 640, height: 1136 },
+    'Default-568h@2x.png': { width: 640, height: 1136 },
+    'Default-677h@2x.png': { width: 750, height: 1334 },
+    'Default-736h@3x.png': { width: 1242, height: 2208 },
+    'Default-Portrait-1792h@2x.png': { width: 828, height: 1792 },
+    'Default-Portrait-2436h@3x.png': { width: 1125, height: 2436 },
+    'Default-Portrait-2688h@3x.png': { width: 1242, height: 2688 },
+    'Default.png': { width: 640, height: 980 },
+    'Default@2x.png': { width: 1242, height: 1902 },
+    'CarryoutBtn.png': { width: 300, height: 300 },
+    'DeliveryBtn.png': { width: 300, height: 300 },
+    'FutureBtn.png': { width: 300, height: 300 },
+    'NowBtn.png': { width: 300, height: 300 }
   };
   if (dimensions[format]) {
     return dimensions[format];
@@ -308,3 +330,4 @@ async function createMonochromeBmp(inputBuffer, targetWidth, targetHeight, conte
     throw error;
   }
 }
+
