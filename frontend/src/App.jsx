@@ -295,23 +295,6 @@ function App() {
                 </div>
               </Col>
            </Row>
-           {/* Results Gallery below Configure & Process */}
-           {processedImages.length > 0 && activeStep === 3 && !isProcessing && (
-              <Row className="mt-4">
-                 <Col>
-                    <div className="panel shadow-sm">
-                       <div className="panel-header">
-                          <h3 className="panel-title">Results Preview</h3>
-                       </div>
-                       <div className="panel-body p-4">
-                          {/* You could potentially put a simplified results view or message here, */}
-                          {/* or just rely on the status bar and the fact that reset is happening. */}
-                          {/* Example: <p>Download complete. Resetting application...</p> */}
-                       </div>
-                    </div>
-                 </Col>
-              </Row>
-           )}
         </Col>
       </Row>
 
