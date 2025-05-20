@@ -170,7 +170,20 @@ function App() {
         setProgress(95);
         const zipBlob = await zip.generateAsync({ type: 'blob', compression: "DEFLATE", compressionOptions: { level: 6 } });
         setStatusMessage("Starting download...");
-        saveAs(zipBlob, 'logocraft_exports.zip');
+
+        // Determine filename based on outputDir
+        let zipFileName = 'logocraft_exports.zip';
+        if (outputDir && outputDir.trim() !== '') {
+          // Sanitize the outputDir to create a valid filename
+          // Replace spaces and special characters with underscores, ensure .zip extension
+          zipFileName = outputDir.trim().replace(/[^a-zA-Z0-9_.-]/g, '_') + '.zip';
+          // Ensure it ends with .zip, even if user included it
+          if (!zipFileName.toLowerCase().endsWith('.zip')) {
+            zipFileName = zipFileName.replace(/\.zip$/i, '') + '.zip';
+          }
+        }
+
+        saveAs(zipBlob, zipFileName);
         setStatusMessage("Process complete, download initiated.");
         didDownloadStart = true;
       } else {
