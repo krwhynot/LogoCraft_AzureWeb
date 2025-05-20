@@ -112,8 +112,9 @@ module.exports = async function (context, req) {
                             background: { r: 255, g: 255, b: 255, alpha: 1 }
                         })
                         .flatten({ background: { r: 255, g: 255, b: 255 } })
-                        // Only apply grayscale and threshold to BMP formats
-                        .grayscale(formatKey.endsWith('.bmp'))
+                        // Apply grayscale to BMP formats and the new PRINTLOGO.png
+                        .grayscale(formatKey.endsWith('.bmp') || formatKey === 'PRINTLOGO.png')
+                        // Only apply threshold to BMP formats
                         .threshold(formatKey.endsWith('.bmp') ? 175 : 0)
                         .png()
                         .toBuffer();
@@ -171,6 +172,7 @@ function getFormatDimensions(format, context) {
     'KDlogo.png': { width: 140, height: 112 },
     'RPTlogo.bmp': { width: 155, height: 110 },
     'PRINTLOGO.bmp': { width: 600, height: 256 },
+    'PRINTLOGO.png': { width: 600, height: 256 },
     'Feature Graphic.png': { width: 1024, height: 500 },
     'hpns.png': { width: 96, height: 96 },
     'loginLogo.png': { width: 600, height: 600 },
@@ -258,4 +260,3 @@ async function createMonochromeBmp(inputBuffer, targetWidth, targetHeight, conte
     throw error;
   }
 }
-

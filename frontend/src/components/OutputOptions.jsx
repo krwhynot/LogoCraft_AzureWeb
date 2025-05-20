@@ -12,7 +12,8 @@ const OutputOptions = ({ selectedFormats, setSelectedFormats, disabled }) => {
         { id: 'Smalllogo.png', label: 'Small Logo PNG (136×136)', tooltip: 'Compact size for thumbnails, app icons, and mobile applications'},
         { id: 'KDlogo.png', label: 'KD Logo PNG (140×112)', tooltip: 'Slightly rectangular format optimized for UI elements and sidebar navigation'},
         { id: 'RPTlogo.bmp', label: 'RPT Logo BMP (155×110)', tooltip: 'BMP format for legacy systems and specialized applications'},
-        { id: 'PRINTLOGO.bmp', label: 'Print Logo BMP (600X256)', tooltip: 'Optimized for thermal printer output at 203 DPI, includes printer-specific adjustments'}
+        { id: 'PRINTLOGO.bmp', label: 'Print Logo BMP (600X256)', tooltip: 'Optimized for thermal printer output at 203 DPI, includes printer-specific adjustments'},
+        { id: 'PRINTLOGO.png', label: 'Print Logo PNG (600X256)', tooltip: 'Grayscale PNG version optimized for digital printing at 203 DPI' }
       ]
     },
     {

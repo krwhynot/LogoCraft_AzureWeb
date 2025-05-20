@@ -26,6 +26,7 @@ function App() {
     'KDlogo.png': false,
     'RPTlogo.bmp': false,
     'PRINTLOGO.bmp': false,
+    'PRINTLOGO.png': false,
     'Feature Graphic.png': false,
     'hpns.png': false,
     'loginLogo.png': false,
@@ -179,7 +180,7 @@ function App() {
           zipFileName = outputDir.trim().replace(/[^a-zA-Z0-9_.-]/g, '_') + '.zip';
           // Ensure it ends with .zip, even if user included it
           if (!zipFileName.toLowerCase().endsWith('.zip')) {
-            zipFileName = zipFileName.replace(/\.zip$/i, '') + '.zip';
+            zipFileName = zipFileName.endsWith('.zip') ? zipFileName : zipFileName + '.zip';
           }
         }
 
@@ -213,7 +214,7 @@ function App() {
     switch(format) {
         case 'Logo.png': return { width: 300, height: 300 }; case 'Smalllogo.png': return { width: 136, height: 136 };
         case 'KDlogo.png': return { width: 140, height: 112 }; case 'RPTlogo.bmp': return { width: 155, height: 110 };
-        case 'PRINTLOGO.bmp': return { width: 600, height: 256 }; case 'Feature Graphic.png': return { width: 1024, height: 500 };
+        case 'PRINTLOGO.bmp': return { width: 600, height: 256 }; case 'PRINTLOGO.png': return { width: 600, height: 256 }; case 'Feature Graphic.png': return { width: 1024, height: 500 };
         case 'hpns.png': return { width: 96, height: 96 }; case 'loginLogo.png': return { width: 600, height: 600 };
         case 'logo.png': return { width: 300, height: 300 }; case 'logo@2x.png': return { width: 300, height: 300 };
         case 'logo@3x.png': return { width: 300, height: 300 }; case 'appicon-60.png': return { width: 60, height: 60 };
